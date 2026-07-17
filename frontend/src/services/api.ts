@@ -1,0 +1,130 @@
+import axios from "axios";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+export const api = axios.create({
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Auto-attach JWT token from localStorage
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("isoko_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle 401 — redirect to login (but not if already on /admin or /login)
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/admin" && currentPath !== "/login") {
+        localStorage.removeItem("isoko_token");
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+export const authAPI = {
+  register: (data: { email: string; username: string; password: string; full_name?: string; phone?: string }) =>
+    api.post("/api/auth/register", data),
+  login: (email: string, password: string) =>
+    api.post<{ access_token: string; refresh_token: string }>("/api/auth/login", { email, password }),
+  socialLogin: (email: string, name: string, provider: string, token: string) =>
+    api.post<{ access_token: string; refresh_token: string }>("/api/auth/social-login", {
+      email,
+      name,
+      provider,
+      id_token: token,
+    }),
+};
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+export const usersAPI = {
+  me: () => api.get("/api/users/me"),
+  updateMe: (data: object) => api.patch("/api/users/me", data),
+  getUser: (id: number) => api.get(`/api/users/${id}`),
+};
+
+// ─── Listings ────────────────────────────────────────────────────────────────
+
+export const listingsAPI = {
+  getAll: (params?: {
+    category_id?: number;
+    city?: string;
+    min_price?: number;
+    max_price?: number;
+    search?: string;
+    skip?: number;
+    limit?: number;
+  }) => api.get("/api/listings/", { params }),
+
+  getForMap: (category_id?: number) =>
+    api.get("/api/listings/map", { params: category_id ? { category_id } : {} }),
+
+  getOne: (id: number) => api.get(`/api/listings/${id}`),
+
+  create: (data: object) => api.post("/api/listings/", data),
+
+  uploadImages: (listingId: number, files: File[]) => {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    return api.post(`/api/listings/${listingId}/images`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  delete: (id: number) => api.delete(`/api/listings/${id}`),
+
+  getCategories: () => api.get("/api/listings/categories/all"),
+};
+
+// ─── Merchants ───────────────────────────────────────────────────────────────
+
+export const merchantsAPI = {
+  getAll: () => api.get("/api/merchants/"),
+  getOne: (id: number) => api.get(`/api/merchants/${id}`),
+  getListings: (id: number) => api.get(`/api/merchants/${id}/listings`),
+  create: (data: object) => api.post("/api/merchants/", data),
+  updateMe: (data: object) => api.patch("/api/merchants/me", data),
+  updateSubscription: (subscription_pack: string) => api.put("/api/merchants/subscription", { subscription_pack }),
+};
+
+// ─── Messages ────────────────────────────────────────────────────────────────
+
+export const messagesAPI = {
+  getConversations: () => api.get("/api/messages/conversations"),
+  getThread: (partnerId: number, params?: { skip?: number; limit?: number }) =>
+    api.get(`/api/messages/${partnerId}`, { params }),
+  send: (data: { receiver_id: number; content: string; listing_id?: number }) =>
+    api.post("/api/messages/", data),
+};
+
+// ─── Map ─────────────────────────────────────────────────────────────────────
+
+export const mapAPI = {
+  getRoute: (params: {
+    start_lat: number;
+    start_lng: number;
+    end_lat: number;
+    end_lng: number;
+    mode?: "driving" | "cycling" | "foot";
+  }) => api.get("/api/map/route", { params }),
+
+  reverseGeocode: (lat: number, lng: number) =>
+    api.get("/api/map/geocode", { params: { lat, lng } }),
+
+  searchPlace: (q: string) =>
+    api.get("/api/map/search", { params: { q } }),
+};
+
+export default api;

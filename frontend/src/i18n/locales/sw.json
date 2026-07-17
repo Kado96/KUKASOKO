@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "home": "Nyumbani",
+    "listings": "Matangazo",
+    "map": "Ramani",
+    "messages": "Ujumbe",
+    "shop": "Duka",
+    "myShop": "Duka Langu",
+    "blog": "Blogu",
+    "login": "Ingia",
+    "logout": "Toka",
+    "addListing": "Tangaza"
+  },
+  "home": {
+    "hero": "Soko la Burundi",
+    "subtitle": "Nunua, uza na kubadilishana karibu nawe",
+    "search": "Tafuta tangazo...",
+    "categories": "Makundi",
+    "featured": "Matangazo maalum",
+    "viewAll": "Ona yote"
+  },
+  "listings": {
+    "title": "Matangazo yote",
+    "filter": "Chuja",
+    "sort": "Panga",
+    "noResults": "Hakuna matangazo yaliyopatikana",
+    "price": "Bei",
+    "category": "Kundi",
+    "location": "Mahali",
+    "allCategories": "Makundi yote",
+    "viewDetail": "Ona maelezo",
+    "contact": "Wasiliana"
+  },
+  "map": {
+    "title": "Ramani",
+    "filterByCategory": "Chuja kwa kundi",
+    "allCategories": "Yote",
+    "myPosition": "Mahali pangu",
+    "getRoute": "Pata njia",
+    "routeMode": {
+      "foot": "Kwa miguu",
+      "cycling": "Baiskeli",
+      "driving": "Gari"
+    },
+    "distance": "Umbali",
+    "duration": "Muda",
+    "km": "km",
+    "min": "dak"
+  },
+  "merchant": {
+    "profile": "Profaili ya Muuzaji",
+    "listings": "Matangazo yake",
+    "hours": "Saa za kazi",
+    "contact": "Wasiliana",
+    "verified": "Imethibitishwa",
+    "rating": "Ukadiriaji",
+    "reviews": "maoni",
+    "noListings": "Hakuna matangazo kwa muuzaji huyu"
+  },
+  "messages": {
+    "title": "Ujumbe",
+    "newMessage": "Ujumbe mpya",
+    "typeMessage": "Andika ujumbe...",
+    "send": "Tuma",
+    "online": "Mtandaoni",
+    "offline": "Nje ya mtandao",
+    "read": "Imesomwa"
+  },
+  "auth": {
+    "login": "Ingia",
+    "register": "Fungua akaunti",
+    "email": "Barua pepe",
+    "password": "Nywila",
+    "username": "Jina la mtumiaji",
+    "fullName": "Jina kamili",
+    "phone": "Simu",
+    "forgotPassword": "Umesahau nywila?",
+    "alreadyAccount": "Una akaunti tayari?",
+    "noAccount": "Huna akaunti bado?",
+    "loginSuccess": "Umeingia",
+    "registerSuccess": "Akaunti imeundwa"
+  },
+  "common": {
+    "loading": "Inapakia...",
+    "error": "Hitilafu imetokea",
+    "retry": "Jaribu tena",
+    "close": "Funga",
+    "save": "Hifadhi",
+    "cancel": "Ghairi",
+    "delete": "Futa",
+    "edit": "Hariri",
+    "confirm": "Thibitisha",
+    "back": "Rudi",
+    "next": "Endelea",
+    "share": "Shiriki",
+    "copy": "Nakili",
+    "BIF": "BIF",
+    "currency": "Faranga ya Burundi"
+  },
+  "delivery": {
+    "title": "Ufuatiliaji wa uwasilishaji",
+    "driverLocation": "Mahali pa dereva",
+    "shareLocation": "Shiriki mahali pangu",
+    "stopSharing": "Acha kushiriki",
+    "status": {
+      "pending": "Inasubiri",
+      "in_progress": "Inaendelea",
+      "delivered": "Imewasilishwa"
+    }
+  }
+}

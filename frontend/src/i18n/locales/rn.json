@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "home": "Akabuye",
+    "listings": "Ivyagurwa",
+    "map": "Ikarata",
+    "messages": "Ubutumwa",
+    "shop": "Amasoko",
+    "myShop": "Amasoko Yanje",
+    "blog": "Ikiganiro",
+    "login": "Injira",
+    "logout": "Sohoka",
+    "addListing": "Tangaza"
+  },
+  "home": {
+    "hero": "Isoko rya Burundi",
+    "subtitle": "Gura, Gurisha no guhana hafi yawe",
+    "search": "Rondera ivyagurwa...",
+    "categories": "Inzego",
+    "featured": "Ivyagurwa bidasanzwe",
+    "viewAll": "Raba vyose"
+  },
+  "listings": {
+    "title": "Ivyagurwa vyose",
+    "filter": "Rondora",
+    "sort": "Tartisa",
+    "noResults": "Nta vyagurwa bibonetse",
+    "price": "Igiciro",
+    "category": "Inzego",
+    "location": "Ahantu",
+    "allCategories": "Inzego zose",
+    "viewDetail": "Raba incamake",
+    "contact": "Vugana"
+  },
+  "map": {
+    "title": "Ikarata",
+    "filterByCategory": "Rondera inzego",
+    "allCategories": "Zose",
+    "myPosition": "Ahantu hanje",
+    "getRoute": "Inzira",
+    "routeMode": {
+      "foot": "Ku maguru",
+      "cycling": "Ubugali",
+      "driving": "Imodoka"
+    },
+    "distance": "Intera",
+    "duration": "Igihe",
+    "km": "km",
+    "min": "min"
+  },
+  "merchant": {
+    "profile": "Umucuruzi",
+    "listings": "Ivyagurwa vyiwe",
+    "hours": "Amasaha y'akazi",
+    "contact": "Vugana",
+    "verified": "Yemejwe",
+    "rating": "Agaciro",
+    "reviews": "ivyerekezo",
+    "noListings": "Nta vyagurwa kuri uyu mucuruzi"
+  },
+  "messages": {
+    "title": "Ubutumwa",
+    "newMessage": "Ubutumwa bushasha",
+    "typeMessage": "Andika ubutumwa...",
+    "send": "Rungika",
+    "online": "Ahari",
+    "offline": "Atahari",
+    "read": "Yasomwe"
+  },
+  "auth": {
+    "login": "Injira",
+    "register": "Fungura konti",
+    "email": "Imeyili",
+    "password": "Ijambo banga",
+    "username": "Izina",
+    "fullName": "Amazina yose",
+    "phone": "Telefone",
+    "forgotPassword": "Wibagiwe ijambo banga?",
+    "alreadyAccount": "Usangiye konti?",
+    "noAccount": "Nta konti ugifise?",
+    "loginSuccess": "Winjiye neza",
+    "registerSuccess": "Konti yafunguwe neza"
+  },
+  "common": {
+    "loading": "Tegereza...",
+    "error": "Hari ikosa ryabaye",
+    "retry": "Ongera ugerageze",
+    "close": "Funga",
+    "save": "Bika",
+    "cancel": "Reka",
+    "delete": "Siba",
+    "edit": "Hindura",
+    "confirm": "Emeza",
+    "back": "Subira inyuma",
+    "next": "Komeza",
+    "share": "Sangira",
+    "copy": "Gumura",
+    "BIF": "BIF",
+    "currency": "Ifaranga ry'Uburundi"
+  },
+  "delivery": {
+    "title": "Gukurikirana gutanga",
+    "driverLocation": "Aho umushoferi ari",
+    "shareLocation": "Sangira ahantu hanje",
+    "stopSharing": "Hagarika gusangira",
+    "status": {
+      "pending": "Bitegerejwe",
+      "in_progress": "Biragenda",
+      "delivered": "Byatanzwe"
+    }
+  }
+}

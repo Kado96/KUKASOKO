@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "home": "Home",
+    "listings": "Listings",
+    "map": "Map",
+    "messages": "Messages",
+    "shop": "Shop",
+    "myShop": "My Shop",
+    "blog": "Blog",
+    "login": "Login",
+    "logout": "Logout",
+    "addListing": "Post Ad"
+  },
+  "home": {
+    "hero": "Burundi's Marketplace",
+    "subtitle": "Buy, sell and trade near you",
+    "search": "Search a listing...",
+    "categories": "Categories",
+    "featured": "Featured listings",
+    "viewAll": "View all"
+  },
+  "listings": {
+    "title": "All listings",
+    "filter": "Filter",
+    "sort": "Sort",
+    "noResults": "No listings found",
+    "price": "Price",
+    "category": "Category",
+    "location": "Location",
+    "allCategories": "All categories",
+    "viewDetail": "View detail",
+    "contact": "Contact"
+  },
+  "map": {
+    "title": "Map",
+    "filterByCategory": "Filter by category",
+    "allCategories": "All",
+    "myPosition": "My location",
+    "getRoute": "Get route",
+    "routeMode": {
+      "foot": "Walking",
+      "cycling": "Cycling",
+      "driving": "Driving"
+    },
+    "distance": "Distance",
+    "duration": "Duration",
+    "km": "km",
+    "min": "min"
+  },
+  "merchant": {
+    "profile": "Merchant Profile",
+    "listings": "Their listings",
+    "hours": "Opening hours",
+    "contact": "Contact",
+    "verified": "Verified",
+    "rating": "Rating",
+    "reviews": "reviews",
+    "noListings": "No listings for this merchant"
+  },
+  "messages": {
+    "title": "Messages",
+    "newMessage": "New message",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "online": "Online",
+    "offline": "Offline",
+    "read": "Read"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "fullName": "Full name",
+    "phone": "Phone",
+    "forgotPassword": "Forgot password?",
+    "alreadyAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "loginSuccess": "Login successful",
+    "registerSuccess": "Account created successfully"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "share": "Share",
+    "copy": "Copy",
+    "BIF": "BIF",
+    "currency": "Burundian Franc"
+  },
+  "delivery": {
+    "title": "Delivery tracking",
+    "driverLocation": "Driver location",
+    "shareLocation": "Share my location",
+    "stopSharing": "Stop sharing",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "delivered": "Delivered"
+    }
+  }
+}

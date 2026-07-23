@@ -19,15 +19,26 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow frontend dev server
+# CORS — origines autorisées (dev + production)
+# Ajouter CORS_ORIGINS dans les variables Render pour des origines supplémentaires
+_extra_origins = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Développement local
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8080",
         "http://localhost:8081",
-        os.getenv("FRONTEND_URL", ""),
+        # Production
+        "https://kukasoko.wuaze.com",
+        "https://kukasoko.onrender.com",
+        "https://www.kukasoko.wuaze.com",
+        # Variable d'environnement (optionnelle)
+        *_extra_origins,
     ],
     allow_credentials=True,
     allow_methods=["*"],

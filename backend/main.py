@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.database import engine, Base
-from app.api import auth, users, listings, messages, merchants, map_routes
+from app.api import auth, users, listings, messages, merchants, map_routes, reviews, media
 from app.websocket import router as ws_router
 
 # Create DB tables
@@ -26,6 +26,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8080",
+        "http://localhost:8081",
         os.getenv("FRONTEND_URL", ""),
     ],
     allow_credentials=True,
@@ -33,9 +34,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads directory for serving static files
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Custom StaticFiles to inject CORS headers at ASGI level (forces CORS everywhere)
+class CORSStaticFiles(StaticFiles):
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["method"] == "OPTIONS":
+            await send({
+                "type": "http.response.start",
+                "status": 204,
+                "headers": [
+                    (b"access-control-allow-origin", b"*"),
+                    (b"access-control-allow-methods", b"GET, OPTIONS"),
+                    (b"access-control-allow-headers", b"*"),
+                ],
+            })
+            await send({"type": "http.response.body", "body": b""})
+            return
+
+        async def cors_send(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers = [h for h in headers if h[0].lower() != b"access-control-allow-origin"]
+                headers.append((b"access-control-allow-origin", b"*"))
+                headers.append((b"access-control-allow-methods", b"GET, OPTIONS"))
+                headers.append((b"access-control-allow-headers", b"*"))
+                message["headers"] = headers
+            await send(message)
+
+        await super().__call__(scope, receive, cors_send)
+
+os.makedirs("media", exist_ok=True)
+app.mount("/media", CORSStaticFiles(directory="media"), name="media")
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -44,6 +72,8 @@ app.include_router(listings.router, prefix="/api/listings", tags=["Listings"])
 app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(merchants.router, prefix="/api/merchants", tags=["Merchants"])
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
+app.include_router(reviews.router, prefix="/api/listings", tags=["Reviews"])
+app.include_router(media.router, prefix="/api/media", tags=["Media"])
 app.include_router(ws_router, prefix="/ws", tags=["WebSockets"])
 
 

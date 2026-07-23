@@ -5,11 +5,48 @@ import { Badge } from "@/components/ui/badge";
 import { useUserLocation, haversineKm, formatDistance } from "@/hooks/useUserLocation";
 import { allListings } from "@/data/listings";
 
+import { useEffect, useState } from "react";
+import { listingsAPI } from "@/services/api";
+
 const NearMeSection = () => {
   const { location, loading, requestLocation } = useUserLocation();
+  const [listings, setListings] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const res = await listingsAPI.getAll();
+        if (res.data && res.data.length > 0) {
+          // Formater les annonces du backend
+          const formatted = res.data.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            price: l.price > 0 ? `${l.price.toLocaleString("fr-BI")} ${l.currency || "BIF"}` : "Sur devis",
+            image: (() => {
+              const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
+              if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+              if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
+              return `http://localhost:8000/${rawImg}`;
+            })(),
+            location: {
+              lat: l.latitude || -3.38,
+              lng: l.longitude || 29.36
+            }
+          }));
+          setListings(formatted);
+        } else {
+          setListings(allListings);
+        }
+      } catch (err) {
+        console.error("Erreur de chargement des annonces NearMe:", err);
+        setListings(allListings);
+      }
+    };
+    fetchListings();
+  }, []);
 
   const listingsWithDistance = location
-    ? allListings
+    ? listings
         .map((l) => ({
           ...l,
           distance: haversineKm(location.lat, location.lng, l.location.lat, l.location.lng),

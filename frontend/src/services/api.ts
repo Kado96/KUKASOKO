@@ -53,6 +53,8 @@ export const usersAPI = {
   me: () => api.get("/api/users/me"),
   updateMe: (data: object) => api.patch("/api/users/me", data),
   getUser: (id: number) => api.get(`/api/users/${id}`),
+  getAll: () => api.get("/api/users/"),
+  updateRole: (id: number, role: string) => api.patch(`/api/users/${id}/role`, { role }),
 };
 
 // ─── Listings ────────────────────────────────────────────────────────────────
@@ -127,4 +129,39 @@ export const mapAPI = {
     api.get("/api/map/search", { params: { q } }),
 };
 
+export const reviewsAPI = {
+  getReviews: (listingId: number) => api.get(`/api/listings/${listingId}/reviews`),
+  postReview: (listingId: number, data: { rating: number; comment?: string }) =>
+    api.post(`/api/listings/${listingId}/reviews`, data),
+  postReport: (listingId: number, data: { report_type: "report" | "claim"; reason: string }) =>
+    api.post(`/api/listings/${listingId}/reports`, data),
+};
+
+// ─── Médiathèque ─────────────────────────────────────────────────────────────
+
+export const mediaAPI = {
+  /** Liste tous les médias (optionnel: filtrer par category) */
+  getAll: (category?: string) =>
+    api.get("/api/media/", { params: category ? { category } : {} }),
+
+  /** Statistiques globales de la médiathèque */
+  getStats: () => api.get("/api/media/stats"),
+
+  /** Upload un ou plusieurs fichiers */
+  upload: (files: File[], category = "library", listingId?: number) => {
+    const form = new FormData();
+    files.forEach((f) => form.append("file", f));
+    const params: Record<string, string | number> = { category };
+    if (listingId) params.listing_id = listingId;
+    return api.post("/api/media/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+      params,
+    });
+  },
+
+  /** Supprime un fichier par son id */
+  delete: (id: number) => api.delete(`/api/media/${id}`),
+};
+
 export default api;
+

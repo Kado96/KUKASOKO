@@ -93,16 +93,68 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
     font-family: 'DM Sans', sans-serif;
+    padding-bottom: 4rem;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      padding-bottom: 0;
+    }
   }
 
   h1, h2, h3 {
     font-family: 'Playfair Display', serif;
   }
-
-  body {
-    /* No global body padding bottom to avoid background gaps */
-  }
 }
+
+/* ─── Leaflet Premium Popups Custom Styles ─── */
+.custom-premium-popup .leaflet-popup-content-wrapper {
+  background: white !important;
+  color: #1f2937 !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.custom-premium-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+}
+
+.custom-premium-popup .leaflet-popup-tip-container {
+  margin-top: -1px !important;
+}
+
+.custom-premium-popup .leaflet-popup-tip {
+  background: white !important;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+.custom-premium-popup a.leaflet-popup-close-button {
+  top: 5px !important;
+  right: 5px !important;
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  width: 18px !important;
+  height: 18px !important;
+  line-height: 18px !important;
+  border-radius: 50% !important;
+  border: none !important;
+}
+
+.custom-premium-popup a.leaflet-popup-close-button:hover {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+

@@ -5,20 +5,102 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { allListings } from "@/data/listings";
+import ShareModal from "@/components/ShareModal";
+
+import { listingsAPI } from "@/services/api";
 
 const Annonces = () => {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState(searchParams.get("category") || "all");
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les catégories de l'API pour mapper les IDs vers leurs noms
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Charger les catégories pour connaître les noms
+    listingsAPI.getCategories()
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          setCategories(res.data);
+        }
+      })
+      .catch(() => {});
+
+    // Charger les annonces réelles du backend
+    listingsAPI.getAll()
+      .then((res) => {
+        if (Array.isArray(res.data)) {
+          // Transformer le format backend en format d'affichage du frontend
+          const apiListings = res.data.map((l: any) => ({
+            id: l.id,
+            uniqueKey: `api-${l.id}`,
+            title: l.title,
+            description: l.description,
+            price: l.price > 0 ? `${l.price.toLocaleString("fr-BI")} ${l.currency || "BIF"}` : "Sur devis",
+            image: (() => {
+              const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
+              if (!rawImg) {
+                // Tenter d'utiliser l'avatar / logo du vendeur
+                if (l.seller?.avatar_url) {
+                  const avatar = l.seller.avatar_url;
+                  if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
+                  return `http://localhost:8000/${avatar}`;
+                }
+                // Fallback sur image par défaut de catégorie
+                const cat = (l.category?.name_fr || l.category?.name || "").toLowerCase();
+                if (cat.includes("immobilier")) return "http://localhost:8000/media/listing/category-immobilier.jpg";
+                if (cat.includes("service")) return "http://localhost:8000/media/listing/category-services.jpg";
+                return "http://localhost:8000/media/listing/category-avendre.jpg";
+              }
+              if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
+              return `http://localhost:8000/${rawImg}`;
+            })(),
+            category: l.category?.name_fr || l.category?.name || "À vendre",
+            categoryId: String(l.category_id),
+            rating: 5.0,
+            reviews: 0,
+            date: new Date(l.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
+            details: [
+              { label: "Localisation", value: l.address || l.city || "Bujumbura" }
+            ]
+          }));
+          
+          // Fusionner les annonces API au début, puis les mocks pour garnir le site
+          const formattedMocks = allListings.map((m: any) => ({
+            ...m,
+            uniqueKey: `mock-${m.id}`,
+            categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4"
+          }));
+          setListings([...apiListings, ...formattedMocks]);
+        }
+      })
+      .catch((err) => {
+        console.error("Erreur chargement annonces:", err);
+        // Fallback complet sur les mocks
+        const formattedMocks = allListings.map((m: any) => ({
+          ...m,
+          uniqueKey: `mock-${m.id}`,
+          categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4"
+        }));
+        setListings(formattedMocks);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     const cat = searchParams.get("category");
     if (cat) setFilterCat(cat);
   }, [searchParams]);
 
-  const filtered = allListings.filter((l) => {
-    const matchSearch = l.title.toLowerCase().includes(search.toLowerCase());
-    const matchCat = filterCat === "all" || l.category === filterCat;
+  const filtered = listings.filter((l) => {
+    const matchSearch = l.title.toLowerCase().includes(search.toLowerCase()) || 
+                        l.description?.toLowerCase().includes(search.toLowerCase());
+    const matchCat = filterCat === "all" || String(l.categoryId) === filterCat || l.category === filterCat;
     return matchSearch && matchCat;
   });
 
@@ -51,14 +133,26 @@ const Annonces = () => {
               />
             </div>
             <select
+              id="annonces-category"
+              name="annonces-category"
               value={filterCat}
               onChange={(e) => setFilterCat(e.target.value)}
               className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">Toutes les catégories</option>
-              <option value="Immobilier">Immobilier</option>
-              <option value="Services">Services</option>
-              <option value="À vendre">À vendre</option>
+              {categories.length > 0 ? (
+                categories.map((cat: any) => (
+                  <option key={cat.id} value={String(cat.id)}>
+                    {cat.name_fr || cat.name}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="Immobilier">Immobilier</option>
+                  <option value="Services">Services</option>
+                  <option value="À vendre">À vendre</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -66,36 +160,55 @@ const Annonces = () => {
           <p className="text-sm text-muted-foreground mb-4">{filtered.length} annonce(s) trouvée(s)</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((listing) => (
-              <Link to={`/annonces/${listing.id}`} key={listing.id} className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer group">
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <img src={listing.image} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                  <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 font-semibold text-xs">{listing.category}</Badge>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-sans font-semibold text-foreground text-lg mb-2 group-hover:text-accent transition-colors">{listing.title}</h3>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(listing.rating) ? "text-accent fill-accent" : "text-muted-foreground/30"}`} />
+              <div key={listing.uniqueKey} className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 group flex flex-col justify-between">
+                <div>
+                  <Link to={`/annonces/${listing.id}`} className="block relative aspect-[16/10] overflow-hidden">
+                    <img src={listing.image} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 font-semibold text-xs">{listing.category}</Badge>
+                  </Link>
+                  <div className="p-5 pb-0">
+                    <Link to={`/annonces/${listing.id}`}>
+                      <h3 className="font-sans font-semibold text-foreground text-lg mb-2 group-hover:text-accent transition-colors">{listing.title}</h3>
+                    </Link>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(listing.rating) ? "text-accent fill-accent" : "text-muted-foreground/30"}`} />
+                        ))}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{listing.rating.toFixed(1)} ({listing.reviews})</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Ajouté le {listing.date}
+                    </div>
+                    <div className="border-t border-border pt-3 space-y-1.5">
+                      {listing.details.map((d) => (
+                        <div key={d.label} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{d.label}</span>
+                          <span className="font-medium text-foreground">{d.value}</span>
+                        </div>
                       ))}
                     </div>
-                    <span className="text-xs text-muted-foreground">{listing.rating.toFixed(1)} ({listing.reviews})</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Ajouté le {listing.date}
-                  </div>
-                  <div className="border-t border-border pt-3 space-y-1.5">
-                    {listing.details.map((d) => (
-                      <div key={d.label} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{d.label}</span>
-                        <span className="font-medium text-foreground">{d.value}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
-              </Link>
+
+                <div className="p-5 pt-3 border-t border-border mt-3 flex items-center justify-between">
+                  <span className="font-bold text-foreground">{listing.price}</span>
+                  <ShareModal
+                    title={listing.title}
+                    description={listing.description}
+                    image={listing.image}
+                    price={listing.price}
+                    url={`/annonces/${listing.id}`}
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-secondary text-muted-foreground hover:text-accent"
+                  />
+                </div>
+              </div>
             ))}
+
           </div>
 
           {filtered.length === 0 && (

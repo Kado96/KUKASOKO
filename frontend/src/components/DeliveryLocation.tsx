@@ -58,12 +58,18 @@ const DeliveryLocation = ({ className = "" }: DeliveryLocationProps) => {
         <Button
           onClick={handleGetLocation}
           disabled={loading}
-          className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold flex items-center justify-center gap-2"
+          className="w-full bg-[#febb2d] hover:bg-[#f5b020] text-zinc-900 font-sans font-semibold rounded-xl py-6 flex items-center justify-center gap-2 border-0 shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
         >
-          <span className="flex items-center justify-center shrink-0 w-4 h-4">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+          <span className="flex items-center justify-center shrink-0">
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-900" />
+            ) : (
+              <svg className="w-4 h-4 text-zinc-900 transform rotate-[45deg]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11" />
+              </svg>
+            )}
           </span>
-          <span>{loading ? "Localisation en cours..." : "Me localiser pour la livraison"}</span>
+          <span className="text-zinc-950 font-bold tracking-tight text-xs sm:text-sm">Me localiser pour la livraison</span>
         </Button>
       ) : (
         <div className="space-y-3">

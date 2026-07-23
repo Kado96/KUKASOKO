@@ -1,12 +1,9 @@
 import { Link } from "react-router-dom";
-import categoryImmobilier from "@/assets/category-immobilier.jpg";
-import categoryServices from "@/assets/category-services.jpg";
-import categoryAvendre from "@/assets/category-avendre.jpg";
 
 const categories = [
-  { name: "Immobilier", count: 2, image: categoryImmobilier, description: "Maisons, appartements, terrains" },
-  { name: "Services", count: 4, image: categoryServices, description: "Nettoyage, soudage, jardinage" },
-  { name: "À vendre", count: 1, image: categoryAvendre, description: "Électronique, meubles, véhicules" },
+  { name: "Immobilier", count: 2, image: "/category-immobilier.jpg", description: "Maisons, appartements, terrains" },
+  { name: "Services", count: 4, image: "/category-services.jpg", description: "Nettoyage, soudage, jardinage" },
+  { name: "À vendre", count: 1, image: "/category-avendre.jpg", description: "Électronique, meubles, véhicules" },
 ];
 
 const CategoriesSection = () => {

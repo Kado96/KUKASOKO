@@ -1,6 +1,4 @@
-import categoryAvendre from "@/assets/category-avendre.jpg";
-import categoryImmobilier from "@/assets/category-immobilier.jpg";
-import categoryServices from "@/assets/category-services.jpg";
+// Utilisation de chemins publics absolus directes pour éviter le blocage CORB.
 
 export interface BlogComment {
   id: number;
@@ -28,7 +26,7 @@ export const blogPosts: BlogPost[] = [
     title: "Comment vendre rapidement sur Isoko",
     excerpt: "Découvrez nos conseils pour rédiger des annonces qui attirent les acheteurs et maximiser vos chances de vente.",
     date: "Novembre 17, 2021",
-    image: categoryAvendre,
+    image: "/category-avendre.jpg",
     category: "Conseils",
     tags: ["Amet", "Dolor", "Ipsum", "Lorem"],
     content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque tempor nisl eget lacinia gravida. Ut in scelerisque lectus. Nunc non imperdiet magna, fermentum convallis libero. Cras nec orci eget tortor fermentum tempor ac pellentesque metus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Etiam sed blandit dolor, eget convallis dui. Suspendisse interdum lectus elit, ut porttitor odio dignissim vitae, integer faucibus efficitur gravida nulla rhoncus.
@@ -48,7 +46,7 @@ Proin consectetur faucibus ipsum sodales pharetra. Pellentesque facilisis arcu a
     title: "Les tendances immobilières en 2026",
     excerpt: "Le marché immobilier évolue. Voici ce que vous devez savoir pour investir intelligemment cette année.",
     date: "Novembre 5, 2021",
-    image: categoryImmobilier,
+    image: "/category-immobilier.jpg",
     category: "Immobilier",
     tags: ["Immobilier", "Tendances", "Investissement"],
     content: `Le marché immobilier connaît des transformations majeures en 2026. Les nouvelles technologies, les changements démographiques et les évolutions économiques redessinent le paysage de l'investissement immobilier.
@@ -67,7 +65,7 @@ L'immobilier durable et écologique devient un critère de choix pour de nombreu
     title: "Trouver les meilleurs services près de chez vous",
     excerpt: "Guide complet pour utiliser Isoko et dénicher les prestataires de services les plus fiables.",
     date: "Novembre 1, 2021",
-    image: categoryServices,
+    image: "/category-services.jpg",
     category: "Guide",
     tags: ["Services", "Guide", "Prestataires"],
     content: `Trouver un prestataire de services fiable peut être un véritable défi. Avec Isoko, nous simplifions cette recherche en vous proposant une plateforme centralisée où vous pouvez comparer les offres, lire les avis et contacter directement les prestataires.

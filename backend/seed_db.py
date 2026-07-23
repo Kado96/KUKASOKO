@@ -55,7 +55,7 @@ def seed():
                 "latitude": -3.3822,
                 "longitude": 29.3644,
                 "address": "Bujumbura, Burundi",
-                "image_urls": "/assets/category-immobilier.jpg"
+                "image_urls": "media/listing/category-immobilier.jpg"
             },
             {
                 "title": "Apple MacBook Pro 15",
@@ -65,7 +65,7 @@ def seed():
                 "latitude": -3.3761,
                 "longitude": 29.3599,
                 "address": "Centre-ville, Bujumbura",
-                "image_urls": "/assets/category-avendre.jpg"
+                "image_urls": "media/listing/category-avendre.jpg"
             },
             {
                 "title": "Services de nettoyage domestique",
@@ -75,7 +75,7 @@ def seed():
                 "latitude": -3.3900,
                 "longitude": 29.3700,
                 "address": "Quartier Rohero, Bujumbura",
-                "image_urls": "/assets/category-services.jpg"
+                "image_urls": "media/listing/category-services.jpg"
             },
             {
                 "title": "Belle pièce centrale",
@@ -85,7 +85,7 @@ def seed():
                 "latitude": -3.3850,
                 "longitude": 29.3550,
                 "address": "Quartier Buyenzi, Bujumbura",
-                "image_urls": "/assets/category-immobilier.jpg"
+                "image_urls": "media/listing/category-immobilier.jpg"
             },
             {
                 "title": "Services de soudage en interne",
@@ -95,7 +95,7 @@ def seed():
                 "latitude": -3.3950,
                 "longitude": 29.3750,
                 "address": "Quartier Kinindo, Bujumbura",
-                "image_urls": "/assets/category-services.jpg"
+                "image_urls": "media/listing/category-services.jpg"
             },
             {
                 "title": "Aménagement paysager et jardinage",
@@ -105,7 +105,7 @@ def seed():
                 "latitude": -3.3780,
                 "longitude": 29.3680,
                 "address": "Quartier Mutanga, Bujumbura",
-                "image_urls": "/assets/category-services.jpg"
+                "image_urls": "media/listing/category-services.jpg"
             }
         ]
 

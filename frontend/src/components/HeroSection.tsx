@@ -31,6 +31,8 @@ const HeroSection = () => {
         {/* Search bar */}
         <div className="max-w-2xl mx-auto bg-card rounded-xl shadow-2xl flex items-center overflow-hidden" style={{ animationDelay: "0.3s", animationFillMode: "forwards", opacity: 0, animation: "fade-in-up 0.6s ease-out 0.3s forwards" }}>
           <select
+            id="hero-category"
+            name="hero-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="hidden sm:block h-14 px-4 bg-card text-foreground border-r border-border text-sm focus:outline-none"

@@ -142,14 +142,34 @@ const BlogDetail = () => {
                 <p className="text-xs text-muted-foreground mb-5">Les champs obligatoires sont indiqués avec *</p>
                 <form onSubmit={handleSubmitComment} className="space-y-4">
                   <textarea
+                    id="comment-text"
+                    name="comment-text"
                     placeholder="Votre commentaire *"
                     value={commentForm.comment}
                     onChange={(e) => setCommentForm({ ...commentForm, comment: e.target.value })}
                     className="w-full h-28 px-4 py-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <input type="text" placeholder="Nom *" value={commentForm.name} onChange={(e) => setCommentForm({ ...commentForm, name: e.target.value })} className="h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
-                    <input type="email" placeholder="E-mail *" value={commentForm.email} onChange={(e) => setCommentForm({ ...commentForm, email: e.target.value })} className="h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                    <input 
+                      id="comment-author-name"
+                      name="comment-author-name"
+                      type="text" 
+                      autoComplete="name"
+                      placeholder="Nom *" 
+                      value={commentForm.name} 
+                      onChange={(e) => setCommentForm({ ...commentForm, name: e.target.value })} 
+                      className="h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" 
+                    />
+                    <input 
+                      id="comment-author-email"
+                      name="comment-author-email"
+                      type="email" 
+                      autoComplete="email"
+                      placeholder="E-mail *" 
+                      value={commentForm.email} 
+                      onChange={(e) => setCommentForm({ ...commentForm, email: e.target.value })} 
+                      className="h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" 
+                    />
                   </div>
                   <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
                     Envoyer

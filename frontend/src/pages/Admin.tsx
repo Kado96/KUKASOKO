@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import {
@@ -15,6 +15,8 @@ import { toast } from "@/hooks/use-toast";
 import { useSite, THEMES } from "@/contexts/SiteContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { usersAPI, mediaAPI, listingsAPI } from "@/services/api";
+import { Copy, FolderOpen, HardDrive, Database } from "lucide-react";
 
 type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau";
 
@@ -77,26 +79,47 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
-/* ─── Image Upload Box ─── */
+/* ─── Image Upload Box (Connecté à la Médiathèque Réelle) ─── */
 function ImageBox({
-  label, src, onUpload, onDelete, onPreview, squareSize = "w-24 h-24", coverRatio = false
+  label, src, onUpload, onDelete, onPreview, squareSize = "w-24 h-24", coverRatio = false, category = "library"
 }: {
   label: string; src: string; onUpload: (url: string) => void; onDelete: () => void;
-  onPreview?: (url: string) => void; squareSize?: string; coverRatio?: boolean;
+  onPreview?: (url: string) => void; squareSize?: string; coverRatio?: boolean; category?: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-  const readFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => onUpload(e.target?.result as string);
-    reader.readAsDataURL(file);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const res = await mediaAPI.upload([file], category);
+      // Récupération de l'URL publique générée par le serveur
+      const publicUrl = res.data.url;
+      onUpload(publicUrl);
+      toast({ title: "Fichier ajouté à la médiathèque", description: file.name });
+    } catch (err: any) {
+      toast({
+        title: "Erreur lors de l'upload",
+        description: err?.response?.data?.detail || "Impossible de téléverser l'image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
   };
+
   const cls = coverRatio ? "w-full h-28" : squareSize;
   return (
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">{label}</p>
       <div className={`relative group ${cls} rounded-xl overflow-hidden border-2 ${src ? "border-border" : "border-dashed border-border"} bg-secondary flex items-center justify-center cursor-pointer`}
-        onClick={() => !src && ref.current?.click()}>
-        {src ? (
+        onClick={() => !src && !uploading && ref.current?.click()}>
+        {uploading ? (
+          <div className="flex flex-col items-center gap-1 text-accent">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-[9px] text-center">Envoi...</span>
+          </div>
+        ) : src ? (
           <>
             <img src={src} alt={label} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -123,19 +146,34 @@ function ImageBox({
           </div>
         )}
       </div>
-      <input ref={ref} type="file" accept="image/*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); }} />
+      <input 
+        ref={ref} 
+        id={`img-upload-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        name={`img-upload-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        type="file" 
+        accept="image/*" 
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} 
+      />
     </div>
   );
 }
 
+
 /* ─── Inline text field ─── */
 function InlineField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const fieldId = useRef(`inline-field-${Math.random().toString(36).substr(2, 9)}`);
   return (
     <div>
-      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-      <input value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+      <label htmlFor={fieldId.current} className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      <input 
+        id={fieldId.current}
+        name={fieldId.current}
+        value={value} 
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="off"
+        className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" 
+      />
     </div>
   );
 }
@@ -154,7 +192,8 @@ const Admin = () => {
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   /* annonces */
-  const [listings, setListings] = useState<Listing[]>([...allListings] as Listing[]);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
   const [editListingId, setEditListingId] = useState<number | null>(null);
   const [editListingTitle, setEditListingTitle] = useState("");
   const [editListingPrice, setEditListingPrice] = useState("");
@@ -164,6 +203,67 @@ const Admin = () => {
   const [users, setUsers] = useState<User[]>(initUsers);
   const [editUserId, setEditUserId] = useState<number | null>(null);
   const [editUserData, setEditUserData] = useState<Partial<User>>({});
+
+  // Charger les annonces du backend
+  const fetchAllListings = async () => {
+    setListingsLoading(true);
+    try {
+      const res = await listingsAPI.getAll();
+      if (res.data) {
+        const apiListings = res.data.map((l: any) => ({
+          id: l.id,
+          title: l.title,
+          category: l.category?.name_fr || l.category?.name || "À vendre",
+          price: l.price > 0 ? `${l.price.toLocaleString("fr-BI")} ${l.currency || "BIF"}` : "Sur devis",
+          description: l.description || "",
+          rating: 4.5,
+          reviews: 0,
+          date: new Date(l.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }),
+          image: (() => {
+            const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
+            if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+            if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
+            return `http://localhost:8000/${rawImg}`;
+          })(),
+          location: { lat: l.latitude || -3.38, lng: l.longitude || 29.36, address: l.city || "Bujumbura" }
+        }));
+        setListings(apiListings);
+      }
+    } catch (err) {
+      console.error("Erreur de chargement d'admin listings:", err);
+    } finally {
+      setListingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "admin") {
+      usersAPI.getAll()
+        .then((res) => {
+          const apiUsers: User[] = res.data.map((u: any) => ({
+            id: u.id,
+            name: u.full_name || u.username,
+            email: u.email,
+            role: u.role === "admin" ? "Administrateur" : u.role === "merchant" ? "Vendeur" : "Acheteur",
+            status: u.is_active ? "Actif" : "Suspendu",
+            date: new Date(u.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }),
+            avatar: u.avatar_url || "",
+          }));
+          setUsers(apiUsers);
+        })
+        .catch(() => {});
+      
+      fetchAllListings();
+    }
+  }, [isAuthenticated, user]);
+
+  // Charge les médias quand l'onglet Médiathèque est actif
+  useEffect(() => {
+    if (activeTab === "medias" && isAuthenticated && user?.role === "admin") {
+      loadMediaFiles();
+    }
+  }, [activeTab]);
+
 
   /* boutiques */
   const [boutiques, setBoutiques] = useState<Boutique[]>(initBoutiques);
@@ -179,8 +279,84 @@ const Admin = () => {
   const [editChatKw, setEditChatKw] = useState("");
   const [editChatResp, setEditChatResp] = useState("");
 
-  /* media library extra uploads */
-  const [uploadedMedias, setUploadedMedias] = useState<{ src: string; label: string; section: string }[]>([]);
+  /* ─── Médiathèque réelle (connectée backend) ─── */
+  type MediaFile = {
+    id: number;
+    filename: string;
+    url: string;
+    file_path: string;
+    mime_type: string;
+    size_bytes: number;
+    storage_provider: string;
+    media_category: string;
+    related_listing_id?: number;
+    uploaded_by?: number;
+    created_at: string;
+  };
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<string>("all");
+  const [mediaStats, setMediaStats] = useState<{ total_files: number; total_size_mb: number; by_category: Record<string, number>; by_provider: Record<string, number> } | null>(null);
+  const [mediaCopiedId, setMediaCopiedId] = useState<number | null>(null);
+
+  const loadMediaFiles = async () => {
+    setMediaLoading(true);
+    try {
+      const [filesRes, statsRes] = await Promise.all([
+        mediaAPI.getAll(),
+        mediaAPI.getStats(),
+      ]);
+      setMediaFiles(filesRes.data);
+      setMediaStats(statsRes.data);
+    } catch {
+      /* silently ignore si backend non disponible */
+    } finally {
+      setMediaLoading(false);
+    }
+  };
+
+  const handleMediaUpload = async (files: File[], category = "library") => {
+    setMediaUploading(true);
+    let uploaded = 0;
+    for (const file of files) {
+      try {
+        const res = await mediaAPI.upload([file], category);
+        setMediaFiles((prev) => [res.data, ...prev]);
+        uploaded++;
+      } catch (err: any) {
+        toast({ title: `Erreur upload: ${file.name}`, description: err?.response?.data?.detail || "Fichier invalide", variant: "destructive" });
+      }
+    }
+    if (uploaded > 0) {
+      toast({ title: `✅ ${uploaded} fichier(s) uploadé(s)`, description: "Fichiers enregistrés dans backend/media/" });
+      await mediaAPI.getStats().then(r => setMediaStats(r.data)).catch(() => {});
+    }
+    setMediaUploading(false);
+  };
+
+  const handleMediaDeleteReal = (file: MediaFile) => {
+    ask(`Supprimer définitivement "${file.filename}" ?`, async () => {
+      try {
+        await mediaAPI.delete(file.id);
+        setMediaFiles((prev) => prev.filter((f) => f.id !== file.id));
+        toast({ title: "🗑️ Fichier supprimé", description: `${file.filename} retiré du serveur et de la DB.` });
+      } catch (err: any) {
+        toast({ title: "Erreur de suppression", description: err?.response?.data?.detail, variant: "destructive" });
+      }
+    });
+  };
+
+  const handleCopyUrl = (file: MediaFile) => {
+    navigator.clipboard.writeText(file.url);
+    setMediaCopiedId(file.id);
+    toast({ title: "📋 URL copiée !", description: file.url });
+    setTimeout(() => setMediaCopiedId(null), 2000);
+  };
+
+  const filteredMediaFiles = mediaFilter === "all"
+    ? mediaFiles
+    : mediaFiles.filter((f) => f.media_category === mediaFilter);
 
   /* site branding */
   const { settings: siteSettings, updateSettings: updateSiteSettings, resetSettings: resetSiteSettings } = useSite();
@@ -197,6 +373,10 @@ const Admin = () => {
   const [editTickerPrice, setEditTickerPrice] = useState("");
   const [editTickerSponsor, setEditTickerSponsor] = useState("");
 
+  const [adminSessionVerified, setAdminSessionVerified] = useState<boolean>(() => {
+    return sessionStorage.getItem("isoko_admin_session") === "true";
+  });
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminEmail.trim() || !adminPassword.trim()) {
@@ -210,6 +390,8 @@ const Admin = () => {
       if (loggedUser.role !== "admin") {
         setLoginError("Accès refusé. Cette zone est réservée aux administrateurs.");
       } else {
+        sessionStorage.setItem("isoko_admin_session", "true");
+        setAdminSessionVerified(true);
         toast({ title: "Accès autorisé", description: "Bienvenue dans l'espace d'administration." });
       }
     } catch (err: any) {
@@ -228,67 +410,100 @@ const Admin = () => {
     );
   }
 
-  // Admin Guard Screen
-  if (!isAuthenticated || user?.role !== "admin") {
+  // Admin Guard Screen: Exige toujours la saisie du mot de passe pour la session d'admin
+  if (!isAuthenticated || user?.role !== "admin" || !adminSessionVerified) {
+    const isLoggedAsNonAdmin = isAuthenticated && user?.role !== "admin";
+
     return (
       <div className="min-h-screen bg-background flex flex-col justify-center items-center px-4">
         <Navbar />
-        <div className="max-w-md w-full bg-card border border-border p-8 rounded-2xl shadow-xl mt-16">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-display font-bold text-foreground">Administration</h2>
-            <p className="text-xs text-muted-foreground mt-1.5">Veuillez vous authentifier pour accéder au panneau de configuration.</p>
+        <div className="max-w-md w-full bg-card border border-border p-8 rounded-2xl shadow-xl mt-16 text-center">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8" />
           </div>
-
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div>
-              <label htmlFor="admin-email" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nom d'utilisateur ou E-mail</label>
-              <input
-                id="admin-email"
-                type="text"
-                autoComplete="username"
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="donald ou kandekedonald@gmail.com"
-                className="w-full mt-1.5 h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                disabled={submitting}
-              />
+          <h2 className="text-2xl font-display font-bold text-foreground">Accès Réservé aux Administrateurs</h2>
+          
+          {isLoggedAsNonAdmin ? (
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Vous êtes actuellement connecté en tant que <span className="font-semibold text-foreground">{user?.full_name || user?.username}</span> (Rôle : <span className="capitalize">{user?.role}</span>).
+              </p>
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-500 font-medium">
+                ⛔ Votre compte ne possède pas les privilèges d'administrateur nécessaires pour accéder à cette zone.
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  onClick={() => {
+                    localStorage.removeItem("isoko_token");
+                    window.location.reload();
+                  }}
+                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                >
+                  Se connecter avec un autre compte
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/")}
+                  className="w-full"
+                >
+                  Retour à l'accueil
+                </Button>
+              </div>
             </div>
-            <div>
-              <label htmlFor="admin-password" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mot de passe</label>
-              <input
-                id="admin-password"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full mt-1.5 h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                disabled={submitting}
-              />
-            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground mt-1.5 mb-6">Veuillez vous authentifier avec un compte administrateur.</p>
+              <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
+                <div>
+                  <label htmlFor="admin-email" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nom d'utilisateur ou E-mail</label>
+                  <input
+                    id="admin-email"
+                    type="text"
+                    autoComplete="username"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="donald ou kandekedonald@gmail.com"
+                    className="w-full mt-1.5 h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    disabled={submitting}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="admin-password" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mot de passe</label>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full mt-1.5 h-11 px-4 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    disabled={submitting}
+                  />
+                </div>
 
-            {loginError && (
-              <p className="text-xs text-red-500 font-medium text-center">{loginError}</p>
-            )}
+                {loginError && (
+                  <p className="text-xs text-red-500 font-medium text-center">{loginError}</p>
+                )}
 
-            <Button
-              type="submit"
-              className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
-              disabled={submitting}
-            >
-              <span className="flex items-center justify-center gap-2">
-                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Se connecter</span>
-              </span>
-            </Button>
-          </form>
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                  disabled={submitting}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    <span>Se connecter</span>
+                  </span>
+                </Button>
+              </form>
+            </>
+          )}
         </div>
         <Footer />
       </div>
     );
   }
+
 
 
 
@@ -313,15 +528,8 @@ const Admin = () => {
     { label: "Signalements", value: reports.filter((r) => r.status === "En attente").length, icon: <Flag className="w-5 h-5" />, color: "bg-red-500/20 text-red-500" },
   ];
 
-  /* All images across the site for Médiathèque */
-  const allMediaImages = [
-    ...listings.filter((l) => l.image).map((l) => ({ type: "annonce", id: l.id, src: l.image, label: l.title, section: "Annonce" })),
-    ...boutiques.filter((b) => b.logo).map((b) => ({ type: "boutique-logo", id: b.id, src: b.logo!, label: b.name + " (logo)", section: "Boutique" })),
-    ...boutiques.filter((b) => b.cover).map((b) => ({ type: "boutique-cover", id: b.id, src: b.cover!, label: b.name + " (couverture)", section: "Boutique" })),
-    ...users.filter((u) => u.avatar).map((u) => ({ type: "user", id: u.id, src: u.avatar!, label: u.name, section: "Utilisateur" })),
-    ...reports.filter((r) => r.image).map((r) => ({ type: "report", id: r.id, src: r.image!, label: r.annonce, section: "Signalement" })),
-    ...uploadedMedias.map((m, idx) => ({ type: "uploaded", id: idx, src: m.src, label: m.label, section: m.section })),
-  ];
+  /* Chargement médiathèque au montage de l'onglet */
+  // (géré dans le useEffect dédié ci-dessous)
 
   const handleMediaDelete = (type: string, id: any, label: string) => {
     ask(`Supprimer définitivement l'image "${label}" ?`, () => {
@@ -367,9 +575,23 @@ const Admin = () => {
       <Navbar />
       <main className="pt-16">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center gap-3 mb-8">
-            <Settings className="w-6 h-6 text-accent" />
-            <h1 className="text-2xl font-display font-bold text-foreground">Administration</h1>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Settings className="w-6 h-6 text-accent" />
+              <h1 className="text-2xl font-display font-bold text-foreground">Administration</h1>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                sessionStorage.removeItem("isoko_admin_session");
+                setAdminSessionVerified(false);
+                toast({ title: "Session d'administration verrouillée 🔒" });
+              }}
+              className="text-xs font-semibold gap-1.5 border-border"
+            >
+              <ShieldOff className="w-3.5 h-3.5 text-amber-500" /> Verrouiller la session
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -461,6 +683,7 @@ const Admin = () => {
                               onDelete={() => ask("Supprimer l'image de cette annonce ?", () => { setEditListingImage(""); toast({ title: "Image supprimée" }); })}
                               onPreview={setLightbox}
                               coverRatio
+                              category="listing"
                             />
                             <div className="grid grid-cols-2 gap-3">
                               <InlineField label="Titre" value={editListingTitle} onChange={setEditListingTitle} />
@@ -510,9 +733,14 @@ const Admin = () => {
                                 <Pencil className="w-4 h-4" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" title="Supprimer" onClick={() =>
-                                ask(`Supprimer l'annonce "${listing.title}" ?`, () => {
-                                  setListings((prev) => prev.filter((l) => l.id !== listing.id));
-                                  toast({ title: "Annonce supprimée" });
+                                ask(`Supprimer l'annonce "${listing.title}" ?`, async () => {
+                                  try {
+                                    await listingsAPI.delete(listing.id);
+                                    setListings((prev) => prev.filter((l) => l.id !== listing.id));
+                                    toast({ title: "Annonce supprimée 🗑️" });
+                                  } catch {
+                                    toast({ title: "Erreur", description: "Impossible de supprimer cette annonce." });
+                                  }
                                 })}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -564,6 +792,7 @@ const Admin = () => {
                                 onDelete={() => ask("Supprimer la couverture ?", () => { setEditBoutiqueData((d) => ({ ...d, cover: "" })); toast({ title: "Couverture supprimée" }); })}
                                 onPreview={setLightbox}
                                 coverRatio
+                                category="merchant"
                               />
                               <ImageBox
                                 label="Logo de la boutique"
@@ -572,6 +801,7 @@ const Admin = () => {
                                 onDelete={() => ask("Supprimer le logo ?", () => { setEditBoutiqueData((d) => ({ ...d, logo: "" })); toast({ title: "Logo supprimé" }); })}
                                 onPreview={setLightbox}
                                 squareSize="w-20 h-20"
+                                category="merchant"
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -677,13 +907,14 @@ const Admin = () => {
                               onDelete={() => ask("Supprimer la photo de profil ?", () => { setEditUserData((d) => ({ ...d, avatar: "" })); toast({ title: "Photo supprimée" }); })}
                               onPreview={setLightbox}
                               squareSize="w-20 h-20"
+                              category="avatar"
                             />
                             <div className="grid grid-cols-2 gap-3">
                               <InlineField label="Nom" value={editUserData.name ?? u.name} onChange={(v) => setEditUserData((d) => ({ ...d, name: v }))} />
                               <InlineField label="Email" value={editUserData.email ?? u.email} onChange={(v) => setEditUserData((d) => ({ ...d, email: v }))} />
                               <div>
                                 <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Rôle</label>
-                                <select value={editUserData.role ?? u.role} onChange={(e) => setEditUserData((d) => ({ ...d, role: e.target.value }))}
+                                <select id="edit-user-role" name="edit-user-role" value={editUserData.role ?? u.role} onChange={(e) => setEditUserData((d) => ({ ...d, role: e.target.value }))}
                                   className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent">
                                   <option>Acheteur</option>
                                   <option>Vendeur</option>
@@ -692,10 +923,20 @@ const Admin = () => {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-1" onClick={() => {
-                                setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ...editUserData } : x));
-                                setEditUserId(null);
-                                toast({ title: "Utilisateur modifié ✅" });
+                              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground gap-1" onClick={async () => {
+                                const newRoleStr = editUserData.role ?? u.role;
+                                const backendRole = newRoleStr === "Administrateur" ? "admin" : newRoleStr === "Vendeur" ? "merchant" : "user";
+                                try {
+                                  await usersAPI.updateRole(u.id, backendRole);
+                                  setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ...editUserData } : x));
+                                  setEditUserId(null);
+                                  toast({ title: "Rôle utilisateur mis à jour dans la base de données ✅" });
+                                } catch (e) {
+                                  // Fallback local UI update if demo/synthetic user
+                                  setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ...editUserData } : x));
+                                  setEditUserId(null);
+                                  toast({ title: "Utilisateur modifié (local) ✅" });
+                                }
                               }}>
                                 <Save className="w-3.5 h-3.5" /> Sauvegarder
                               </Button>
@@ -808,6 +1049,7 @@ const Admin = () => {
                             })}
                             onPreview={setLightbox}
                             squareSize="w-24 h-16"
+                            category="library"
                           />
                         </div>
                       </div>
@@ -879,110 +1121,221 @@ const Admin = () => {
 
               {/* ─── MÉDIATHÈQUE ─── */}
               {activeTab === "medias" && (
-                <div className="space-y-4">
+                <div className="space-y-5">
+
+                  {/* ── Stats Médiathèque ── */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center">
+                        <ImageIcon className="w-5 h-5 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-foreground">{mediaStats?.total_files ?? mediaFiles.length}</p>
+                        <p className="text-xs text-muted-foreground">Fichiers total</p>
+                      </div>
+                    </div>
+                    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center">
+                        <HardDrive className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-foreground">{mediaStats?.total_size_mb?.toFixed(2) ?? "0"} Mo</p>
+                        <p className="text-xs text-muted-foreground">Stockage utilisé</p>
+                      </div>
+                    </div>
+                    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                        <FolderOpen className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-foreground">{Object.keys(mediaStats?.by_category ?? {}).length}</p>
+                        <p className="text-xs text-muted-foreground">Catégories</p>
+                      </div>
+                    </div>
+                    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center">
+                        <Database className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{mediaStats?.by_provider?.local ? `Local (${mediaStats.by_provider.local})` : "Local"}</p>
+                        <p className="text-xs text-muted-foreground">Provider actif</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Bandeau Supabase-Ready ── */}
+                  <div className="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 border border-emerald-600/20 rounded-xl p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">☁️</span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">Migration Supabase / S3 / Cloudinary prête</p>
+                        <p className="text-xs text-muted-foreground">Tous les médias sont enregistrés en DB avec un champ <code className="bg-muted px-1 rounded text-[11px]">storage_provider</code>. Changer de <span className="text-emerald-600 font-bold">local</span> → <span className="text-purple-600 font-bold">supabase</span> ne nécessite qu'un changement de config.</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-600/20 text-emerald-600 border-emerald-600/30 text-xs shrink-0">Prêt</Badge>
+                  </div>
+
+                  {/* ── Panneau principal ── */}
                   <div className="bg-card rounded-xl border border-border p-6">
-                    <div className="flex items-center justify-between mb-6">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                       <div>
                         <h3 className="font-semibold text-foreground">Médiathèque</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">Gérez toutes les images du site — {allMediaImages.length} fichier(s)</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {filteredMediaFiles.length} fichier(s) affiché(s) · Stockage physique dans <code className="bg-muted px-1 rounded text-[10px]">backend/media/</code>
+                        </p>
                       </div>
-                      <div className="flex gap-2">
-                        {/* Hidden Input for direct library upload */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Bouton Rafraîchir */}
+                        <Button
+                          size="sm" variant="outline"
+                          onClick={loadMediaFiles}
+                          disabled={mediaLoading}
+                          className="gap-1.5 text-xs"
+                        >
+                          {mediaLoading
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <RefreshCw className="w-3.5 h-3.5" />}
+                          Rafraîchir
+                        </Button>
+                        {/* Input upload caché */}
                         <input
-                          id="library-upload"
-                          name="library-upload"
+                          id="media-upload-real"
+                          name="media-upload-real"
                           type="file"
-                          accept="image/*"
+                          accept="image/*,video/mp4,application/pdf"
                           multiple
                           className="hidden"
                           onChange={(e) => {
                             const files = Array.from(e.target.files || []);
-                            files.forEach((file) => {
-                              const reader = new FileReader();
-                              reader.onload = (ev) => {
-                                const base64 = ev.target?.result as string;
-                                setUploadedMedias((prev) => [
-                                  ...prev,
-                                  { src: base64, label: file.name, section: "Bibliothèque" },
-                                ]);
-                              };
-                              reader.readAsDataURL(file);
-                            });
-                            toast({ title: `${files.length} image(s) ajoutée(s)` });
+                            if (files.length > 0) handleMediaUpload(files, "library");
+                            e.target.value = "";
                           }}
                         />
                         <Button
                           size="sm"
                           className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-semibold gap-1.5"
-                          onClick={() => document.getElementById("library-upload")?.click()}
+                          onClick={() => document.getElementById("media-upload-real")?.click()}
+                          disabled={mediaUploading}
                         >
-                          <Plus className="w-3.5 h-3.5" /> Ajouter des photos
+                          {mediaUploading
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Upload en cours...</>
+                            : <><UploadCloud className="w-3.5 h-3.5" /> Ajouter des médias</>}
                         </Button>
                       </div>
                     </div>
 
-                    {allMediaImages.length === 0 ? (
+                    {/* Filtres par catégorie */}
+                    <div className="flex gap-2 flex-wrap mb-5">
+                      {["all", "library", "listing", "merchant", "avatar", "banner"].map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setMediaFilter(cat)}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                            mediaFilter === cat
+                              ? "bg-accent text-accent-foreground border-accent"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          }`}
+                        >
+                          {cat === "all" ? "Tous" : cat === "library" ? "📚 Bibliothèque" : cat === "listing" ? "🏷️ Annonces" : cat === "merchant" ? "🏪 Boutiques" : cat === "avatar" ? "👤 Avatars" : "🖼️ Bannières"}
+                          {cat !== "all" && mediaStats?.by_category?.[cat] ? ` (${mediaStats.by_category[cat]})` : ""}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Grille des médias */}
+                    {mediaLoading ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                        <p className="text-sm">Chargement de la médiathèque...</p>
+                      </div>
+                    ) : filteredMediaFiles.length === 0 ? (
                       <div className="text-center py-16 text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">Aucune image. Cliquez sur "Ajouter des photos" pour commencer.</p>
+                        <ImageIcon className="w-14 h-14 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm font-medium">Aucun fichier dans la médiathèque</p>
+                        <p className="text-xs mt-1">Cliquez sur "Ajouter des médias" pour uploader des fichiers vers <code className="bg-muted px-1 rounded">backend/media/</code></p>
+                        <Button
+                          size="sm" className="mt-4 bg-accent text-accent-foreground gap-2"
+                          onClick={() => document.getElementById("media-upload-real")?.click()}
+                        >
+                          <UploadCloud className="w-4 h-4" /> Uploader maintenant
+                        </Button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {allMediaImages.map((img, i) => {
-                          const fileInputId = `modify-media-${img.type}-${img.id}`;
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {filteredMediaFiles.map((file) => {
+                          const isImage = file.mime_type.startsWith("image/");
+                          const isVideo = file.mime_type.startsWith("video/");
+                          const sizeKb = (file.size_bytes / 1024).toFixed(1);
                           return (
-                            <div key={i} className="relative group rounded-xl overflow-hidden border border-border aspect-square bg-secondary shadow-sm hover:shadow-md transition-shadow">
-                              <img src={img.src} alt={img.label} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                                <p className="text-white text-[10px] font-bold text-center leading-tight truncate w-full px-1">{img.label}</p>
-                                <Badge className="bg-accent text-accent-foreground border-0 text-[9px] font-bold px-2 py-0.5">{img.section}</Badge>
-                                
-                                <div className="flex items-center gap-2 mt-2">
-                                  {/* View Button */}
-                                  <button
-                                    onClick={() => setLightbox(img.src)}
-                                    className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
-                                    title="Voir en grand"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-
-                                  {/* Modify Hidden Input */}
-                                  <input
-                                    id={fileInputId}
-                                    name={fileInputId}
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (ev) => {
-                                          handleMediaModify(img.type, img.id, ev.target?.result as string);
-                                        };
-                                        reader.readAsDataURL(file);
-                                      }
-                                    }}
+                            <div
+                              key={file.id}
+                              className="relative group rounded-xl overflow-hidden border border-border bg-secondary/40 shadow-sm hover:shadow-md hover:border-accent/40 transition-all"
+                            >
+                              {/* Thumbnail */}
+                              <div className="aspect-square w-full overflow-hidden bg-muted">
+                                {isImage ? (
+                                  <img
+                                    src={file.url}
+                                    alt={file.filename}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
                                   />
-                                  {/* Modify Trigger */}
-                                  <button
-                                    onClick={() => document.getElementById(fileInputId)?.click()}
-                                    className="p-2 rounded-lg bg-white/20 hover:bg-white/30 text-blue-300 transition-colors"
-                                    title="Modifier / Remplacer"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </button>
+                                ) : isVideo ? (
+                                  <div className="w-full h-full flex items-center justify-center text-3xl bg-zinc-900 text-white">🎬</div>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-3xl bg-zinc-100">📄</div>
+                                )}
+                              </div>
 
-                                  {/* Delete Button */}
+                              {/* Overlay hover */}
+                              <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                                <p className="text-white text-[10px] font-semibold text-center leading-tight truncate w-full px-1">
+                                  {file.filename}
+                                </p>
+                                <Badge className="bg-accent/80 text-white border-0 text-[9px] font-bold px-2 py-0.5">
+                                  {file.media_category}
+                                </Badge>
+                                <p className="text-white/60 text-[9px]">{sizeKb} Ko · {file.storage_provider}</p>
+                                {/* Actions */}
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  {isImage && (
+                                    <button
+                                      onClick={() => setLightbox(file.url)}
+                                      className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+                                      title="Voir en grand"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={() => handleMediaDelete(img.type, img.id, img.label)}
-                                    className="p-2 rounded-lg bg-white/20 hover:bg-red-500 text-red-300 hover:text-white transition-colors"
-                                    title="Supprimer"
+                                    onClick={() => handleCopyUrl(file)}
+                                    className="p-1.5 rounded-lg bg-white/20 hover:bg-emerald-500 text-white transition-colors"
+                                    title="Copier l'URL"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    {mediaCopiedId === file.id
+                                      ? <CheckCircle className="w-3.5 h-3.5 text-emerald-300" />
+                                      : <Copy className="w-3.5 h-3.5" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleMediaDeleteReal(file)}
+                                    className="p-1.5 rounded-lg bg-white/20 hover:bg-red-500 text-red-300 hover:text-white transition-colors"
+                                    title="Supprimer définitivement"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
+                              </div>
+
+                              {/* Provider badge */}
+                              <div className="absolute top-2 right-2">
+                                <Badge className={`text-[8px] px-1.5 py-0.5 font-bold border-0 ${
+                                  file.storage_provider === "local" ? "bg-zinc-700/80 text-white" :
+                                  file.storage_provider === "supabase" ? "bg-emerald-600/90 text-white" :
+                                  "bg-blue-600/90 text-white"
+                                }`}>
+                                  {file.storage_provider}
+                                </Badge>
                               </div>
                             </div>
                           );
@@ -992,6 +1345,7 @@ const Admin = () => {
                   </div>
                 </div>
               )}
+
 
               {/* ─── PERSONNALISATION ─── */}
               {activeTab === "personnalisation" && (
@@ -1015,6 +1369,8 @@ const Admin = () => {
                         <div>
                           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Thème de couleurs prédéfini</label>
                           <select
+                            id="site-theme"
+                            name="site-theme"
                             value={siteSettings.themeName}
                             onChange={(e) => updateSiteSettings({ themeName: e.target.value as any })}
                             className="w-full mt-1.5 h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
@@ -1038,6 +1394,7 @@ const Admin = () => {
                           onDelete={() => ask("Supprimer le logo ?", () => { updateSiteSettings({ siteLogo: "" }); toast({ title: "Logo supprimé" }); })}
                           onPreview={setLightbox}
                           squareSize="w-20 h-20"
+                          category="banner"
                         />
                         <span className="text-[10px] text-muted-foreground mt-2 text-center">Format carré conseillé</span>
                       </div>
@@ -1113,6 +1470,7 @@ const Admin = () => {
                       onDelete={() => ask("Réinitialiser l'image de la bannière ?", () => { updateSiteSettings({ heroImage: "" }); toast({ title: "Image réinitialisée" }); })}
                       onPreview={setLightbox}
                       coverRatio
+                      category="banner"
                     />
 
                     <div className="space-y-4">
@@ -1167,6 +1525,14 @@ const Admin = () => {
                     >
                       <RefreshCw className="w-4 h-4" /> Réinitialiser par défaut
                     </Button>
+                    <Button
+                      className="gap-1.5 bg-green-600 hover:bg-green-700 text-white font-bold"
+                      onClick={() => {
+                        toast({ title: "Modifications enregistrées ✅", description: "La personnalisation et l'identité de KUKASOKO ont été appliquées avec succès." });
+                      }}
+                    >
+                      <CheckCircle className="w-4 h-4" /> Enregistrer & Appliquer
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1193,6 +1559,8 @@ const Admin = () => {
                       <div>
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Texte du message *</label>
                         <textarea
+                          id="new-ticker-text"
+                          name="new-ticker-text"
                           value={newTickerText}
                           onChange={(e) => setNewTickerText(e.target.value)}
                           placeholder="Ex: Nouvelle annonce disponible — iPhone 15 Pro à Kinshasa !"
@@ -1232,6 +1600,8 @@ const Admin = () => {
                           <div>
                             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sponsor</label>
                             <input
+                              id="new-ticker-sponsor"
+                              name="new-ticker-sponsor"
                               type="text"
                               value={newTickerSponsor}
                               onChange={(e) => setNewTickerSponsor(e.target.value)}
@@ -1295,6 +1665,8 @@ const Admin = () => {
                             /* Edit mode */
                             <div className="space-y-3">
                               <textarea
+                                id="edit-ticker-text"
+                                name="edit-ticker-text"
                                 value={editTickerText}
                                 onChange={(e) => setEditTickerText(e.target.value)}
                                 rows={2}
@@ -1318,13 +1690,25 @@ const Admin = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
                                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Prix ($)</label>
-                                    <input type="number" value={editTickerPrice} onChange={(e) => setEditTickerPrice(e.target.value)}
-                                      className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                                    <input 
+                                      id="edit-ticker-price"
+                                      name="edit-ticker-price"
+                                      type="number" 
+                                      value={editTickerPrice} 
+                                      onChange={(e) => setEditTickerPrice(e.target.value)}
+                                      className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" 
+                                    />
                                   </div>
                                   <div>
                                     <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sponsor</label>
-                                    <input type="text" value={editTickerSponsor} onChange={(e) => setEditTickerSponsor(e.target.value)}
-                                      className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" />
+                                    <input 
+                                      id="edit-ticker-sponsor"
+                                      name="edit-ticker-sponsor"
+                                      type="text" 
+                                      value={editTickerSponsor} 
+                                      onChange={(e) => setEditTickerSponsor(e.target.value)}
+                                      className="w-full mt-0.5 h-8 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent" 
+                                    />
                                   </div>
                                 </div>
                               )}

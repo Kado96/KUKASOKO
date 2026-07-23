@@ -37,6 +37,8 @@ class User(Base):
     merchant_profile = relationship("MerchantProfile", back_populates="user", uselist=False)
     sent_messages = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender")
     received_messages = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver")
+    reviews = relationship("Review", foreign_keys="Review.reviewer_id", back_populates="reviewer")
+    reports = relationship("Report", foreign_keys="Report.reporter_id", back_populates="reporter")
 
 
 class Category(Base):
@@ -84,6 +86,8 @@ class Listing(Base):
     # Relations
     seller = relationship("User", back_populates="listings")
     category = relationship("Category", back_populates="listings")
+    reviews = relationship("Review", back_populates="listing")
+    reports = relationship("Report", back_populates="listing")
 
 
 class MerchantProfile(Base):
@@ -138,3 +142,75 @@ class DeliverySession(Base):
     status = Column(String, default="pending")  # pending, in_progress, delivered
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Review(Base):
+    """Avis laissé sur une annonce par un utilisateur."""
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5
+    comment = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    listing = relationship("Listing", back_populates="reviews")
+    reviewer = relationship("User", foreign_keys=[reviewer_id], back_populates="reviews")
+
+
+class Report(Base):
+    """Signalement ou réclamation sur une annonce."""
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id"), nullable=False)
+    reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    report_type = Column(String, nullable=False)  # "report" or "claim"
+    reason = Column(Text, nullable=False)
+    status = Column(String, default="pending")  # pending, reviewed, resolved
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    listing = relationship("Listing", back_populates="reports")
+    reporter = relationship("User", foreign_keys=[reporter_id], back_populates="reports")
+
+
+class MediaFile(Base):
+    """
+    Médiathèque centralisée.
+    - storage_provider : 'local' | 'supabase' | 's3' | 'cloudinary'
+    - Prêt pour migration vers Supabase Storage ou tout autre CDN.
+    """
+    __tablename__ = "media_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Nom original du fichier
+    filename = Column(String, nullable=False)
+
+    # Chemin relatif dans le dossier media/ ou URL complète (Supabase/S3)
+    file_path = Column(String, nullable=False)
+
+    # URL publique d'accès au fichier
+    url = Column(String, nullable=False)
+
+    # Type MIME : image/jpeg, image/png, video/mp4, etc.
+    mime_type = Column(String, default="image/jpeg")
+
+    # Taille en octets
+    size_bytes = Column(Integer, default=0)
+
+    # Provider de stockage : local, supabase, s3, cloudinary
+    storage_provider = Column(String, default="local")
+
+    # Catégorie fonctionnelle : listing, merchant, avatar, banner, library
+    media_category = Column(String, default="library")
+
+    # Référence optionnelle à l'entité parente
+    related_listing_id = Column(Integer, ForeignKey("listings.id"), nullable=True)
+    related_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Qui a uploadé
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -28,12 +28,12 @@ interface SiteContextType {
 }
 
 const defaultSettings: SiteSettings = {
-  siteName: "ISOKO",
-  siteLogo: "",
-  footerEmail: "info@isoko-online.com",
-  footerPhone: "+243 000 000 000",
-  heroTitle: "Trouvez tout ce dont vous avez besoin.",
-  heroSubtitle: "Recherchez des propriétés, des services et des articles à vendre sur un seul site",
+  siteName: "KUKASOKO",
+  siteLogo: "/logo.jpg",
+  footerEmail: "info@kukasoko.com",
+  footerPhone: "+257 00 00 00 00",
+  heroTitle: "Trouvez tout ce dont vous avez besoin au Burundi.",
+  heroSubtitle: "Recherchez des propriétés, des services et des articles à vendre en un clic",
   heroImage: "",
   // Default values matching index.css :root
   primaryColor: "225 30% 18%",

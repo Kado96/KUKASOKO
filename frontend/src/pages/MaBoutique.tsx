@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import categoryImmobilier from "@/assets/category-immobilier.jpg";
 import { useAuth } from "@/contexts/AuthContext";
-import { merchantsAPI, messagesAPI } from "@/services/api";
+import { merchantsAPI, messagesAPI, listingsAPI } from "@/services/api";
 import { useChatWebSocket } from "@/hooks/useWebSocket";
 import { useUserLocation } from "@/hooks/useUserLocation";
 
@@ -378,6 +378,8 @@ const MaBoutique = () => {
   const { user, isAuthenticated } = useAuth();
   const [hasShop, setHasShop] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [myListings, setMyListings] = useState<any[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -405,6 +407,34 @@ const MaBoutique = () => {
     location: { lat: number; lng: number } | null;
   } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+
+  // Fonction pour charger les annonces de l'utilisateur connecté
+  const fetchMyListings = useCallback(async () => {
+    if (!user) return;
+    setListingsLoading(true);
+    try {
+      const res = await listingsAPI.getAll();
+      if (res.data) {
+        const filtered = res.data.filter((l: any) => l.user_id === user.id).map((l: any) => ({
+          id: l.id,
+          title: l.title,
+          price: l.price > 0 ? `${l.price.toLocaleString("fr-BI")} ${l.currency || "BIF"}` : "Sur devis",
+          category: l.category?.name_fr || l.category?.name || "À vendre",
+          image: (() => {
+            const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
+            if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+            if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
+            return `http://localhost:8000/${rawImg}`;
+          })()
+        }));
+        setMyListings(filtered);
+      }
+    } catch (err) {
+      console.error("Erreur de chargement des annonces utilisateur:", err);
+    } finally {
+      setListingsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -439,10 +469,11 @@ const MaBoutique = () => {
             location: myShop.latitude && myShop.longitude ? { lat: myShop.latitude, lng: myShop.longitude } : null,
           });
           setHasShop(true);
+          fetchMyListings();
         }
       })
       .catch(() => {});
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchMyListings]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "logo" | "cover") => {
     const file = e.target.files?.[0];
@@ -712,7 +743,7 @@ const MaBoutique = () => {
               {/* Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: "Annonces", value: "0", icon: Store },
+                  { label: "Annonces", value: String(myListings.length), icon: Store },
                   { label: "Vues", value: "0", icon: Globe },
                   { label: "Abonnement", value: shop.subscription_pack || "Standard", icon: CheckCircle2 },
                 ].map((stat) => (
@@ -731,16 +762,78 @@ const MaBoutique = () => {
               {/* ─── Chat Center (clone de Messages.tsx) ─── */}
               <ChatCenter />
 
-              {/* Annonces vides */}
-              <div className="bg-card rounded-xl border border-border p-8 text-center">
-                <Store className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Aucune annonce dans votre boutique</h3>
-                <p className="text-sm text-muted-foreground mb-4">Ajoutez votre première annonce pour commencer à vendre.</p>
-                <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
-                  <a href="/ajouter-annonce">
-                    <Plus className="w-4 h-4 mr-2" /> Ajouter une annonce
-                  </a>
-                </Button>
+              {/* Liste des annonces de ma boutique */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
+                    <Store className="w-5 h-5 text-accent" /> Mes Annonces en ligne ({myListings.length})
+                  </h3>
+                  <Button asChild size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
+                    <a href="/ajouter-annonce">
+                      <Plus className="w-4 h-4 mr-1.5" /> Nouvelle annonce
+                    </a>
+                  </Button>
+                </div>
+
+                {listingsLoading ? (
+                  <div className="bg-card rounded-xl border border-border p-12 text-center flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                    <p className="text-sm text-muted-foreground">Chargement de vos annonces...</p>
+                  </div>
+                ) : myListings.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {myListings.map((listing) => (
+                      <div key={listing.id} className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
+                        <div>
+                          <div className="aspect-video relative overflow-hidden bg-secondary">
+                            <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
+                            <Badge className="absolute top-2 right-2 bg-accent text-accent-foreground border-0 text-[10px] font-bold">
+                              {listing.category}
+                            </Badge>
+                          </div>
+                          <div className="p-4">
+                            <h4 className="font-semibold text-foreground text-sm line-clamp-1 mb-1">{listing.title}</h4>
+                            <p className="text-accent font-bold text-sm">{listing.price}</p>
+                          </div>
+                        </div>
+                        <div className="p-4 pt-0 flex gap-2 border-t border-border/50 mt-2">
+                          <Button asChild variant="outline" size="xs" className="flex-1 text-xs py-1 h-8 border-border hover:bg-secondary">
+                            <a href={`/annonces/${listing.id}`}>Voir</a>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="flex-1 text-xs py-1 h-8 text-destructive border-destructive/20 hover:bg-destructive/10"
+                            onClick={async () => {
+                              if (confirm("Voulez-vous vraiment supprimer cette annonce ?")) {
+                                try {
+                                  await listingsAPI.delete(listing.id);
+                                  toast({ title: "Annonce supprimée 🗑️", description: "L'annonce a été retirée de votre boutique." });
+                                  fetchMyListings();
+                                } catch {
+                                  toast({ title: "Erreur", description: "Impossible de supprimer l'annonce." });
+                                }
+                              }
+                            }}
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-card rounded-xl border border-border p-8 text-center">
+                    <Store className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Aucune annonce dans votre boutique</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Ajoutez votre première annonce pour commencer à vendre.</p>
+                    <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
+                      <a href="/ajouter-annonce">
+                        <Plus className="w-4 h-4 mr-2" /> Ajouter une annonce
+                      </a>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -1,6 +1,4 @@
-import categoryImmobilier from "@/assets/category-immobilier.jpg";
-import categoryServices from "@/assets/category-services.jpg";
-import categoryAvendre from "@/assets/category-avendre.jpg";
+// Utilisation de chemins publics absolus directes pour éviter le blocage CORB.
 
 export interface ListingDetail {
   label: string;
@@ -35,7 +33,7 @@ export const allListings: Listing[] = [
     id: 1,
     title: "Chambre rénovée et élégante",
     category: "Immobilier",
-    image: categoryImmobilier,
+    image: "/category-immobilier.jpg",
     rating: 4.5,
     reviews: 2,
     date: "17 Nov 2021",
@@ -55,7 +53,7 @@ export const allListings: Listing[] = [
     id: 2,
     title: "Apple MacBook Pro 15 pouces",
     category: "À vendre",
-    image: categoryAvendre,
+    image: "/category-avendre.jpg",
     rating: 5.0,
     reviews: 2,
     date: "17 Nov 2021",
@@ -75,7 +73,7 @@ export const allListings: Listing[] = [
     id: 3,
     title: "Services de nettoyage domestique",
     category: "Services",
-    image: categoryServices,
+    image: "/category-services.jpg",
     rating: 4.0,
     reviews: 2,
     date: "17 Nov 2021",
@@ -95,7 +93,7 @@ export const allListings: Listing[] = [
     id: 4,
     title: "Belle pièce centrale",
     category: "Immobilier",
-    image: categoryImmobilier,
+    image: "/category-immobilier.jpg",
     rating: 5.0,
     reviews: 2,
     date: "17 Nov 2021",
@@ -115,7 +113,7 @@ export const allListings: Listing[] = [
     id: 5,
     title: "Services de soudage en interne",
     category: "Services",
-    image: categoryServices,
+    image: "/category-services.jpg",
     rating: 4.0,
     reviews: 2,
     date: "16 Nov 2021",
@@ -135,7 +133,7 @@ export const allListings: Listing[] = [
     id: 6,
     title: "Aménagement paysager et jardinage",
     category: "Services",
-    image: categoryServices,
+    image: "/category-services.jpg",
     rating: 5.0,
     reviews: 2,
     date: "16 Nov 2021",

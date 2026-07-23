@@ -113,7 +113,7 @@ export default function Carte() {
       .finally(() => setListingsLoading(false));
   }, [selectedCategory]);
 
-  // Init map once
+  // Init map once with popup autoplay cycle
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const center: [number, number] = [-3.3822, 29.3644];
@@ -122,7 +122,84 @@ export default function Carte() {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>",
     }).addTo(map);
+
+    let autoplayTimer: any = null;
+
+    // Quand un popup s'ouvre
+    map.on("popupopen", (e: any) => {
+      // Nettoyage de sécurité
+      if (autoplayTimer) clearInterval(autoplayTimer);
+
+      const popup = e.popup;
+      // On cherche les propriétés du marqueur pour retrouver la clé de groupe
+      const marker = e.target._layers ? Object.values(e.target._layers).find((l: any) => l.getPopup?.() === popup) : null;
+      
+      // Alternative : parcourir window.__popupMarkers pour identifier la key
+      let markerKey = "";
+      const markers = (window as any).__popupMarkers || {};
+      for (const [key, m] of Object.entries(markers)) {
+        if (m === e.target || (e.target.getPopup && e.target.getPopup() === popup)) {
+          markerKey = key;
+          break;
+        }
+      }
+
+      if (!markerKey) {
+        // Fallback par recherche d'ID dans le DOM du popup si non trouvé directement
+        const content = popup.getContent();
+        if (typeof content === "string") {
+          const match = content.match(/window\.__changePhotoIndex\('([^']+)'/);
+          if (match) markerKey = match[1];
+        }
+      }
+
+      if (markerKey) {
+        autoplayTimer = setInterval(() => {
+          const group = (window as any).__popupGroups?.[markerKey];
+          if (!group) return;
+          const listingIndex = (window as any).__popupStates?.[markerKey] || 0;
+          const listing = group[listingIndex];
+          if (!listing) return;
+
+          // Extraire les photos
+          const API_BASE = "http://localhost:8000";
+          const norm = (url: string) => {
+            if (!url || !url.trim()) return "";
+            if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+            return `${API_BASE}/${url.replace(/^\//, "")}`;
+          };
+          const photos: string[] = [];
+          if (listing.image?.trim()) photos.push(norm(listing.image.trim()));
+          if (listing.image_urls) {
+            listing.image_urls.split(",").forEach((u: string) => {
+              const n = norm(u.trim());
+              if (n && !photos.includes(n)) photos.push(n);
+            });
+          }
+
+          if (photos.length > 1) {
+            const currentPhotoIdx = (window as any).__photoStates?.[markerKey] || 0;
+            const nextPhotoIdx = (currentPhotoIdx + 1) % photos.length;
+            
+            // Appeler la fonction globale de changement de photo
+            if (typeof (window as any).__changePhotoIndex === "function") {
+              (window as any).__changePhotoIndex(markerKey, listingIndex, nextPhotoIdx);
+            }
+          }
+        }, 3000);
+      }
+    });
+
+    // Quand le popup se ferme
+    map.on("popupclose", () => {
+      if (autoplayTimer) {
+        clearInterval(autoplayTimer);
+        autoplayTimer = null;
+      }
+    });
+
     return () => {
+      if (autoplayTimer) clearInterval(autoplayTimer);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -164,93 +241,274 @@ export default function Carte() {
     (window as any).__popupGroups = grouped;
     (window as any).__popupMarkers = {};
 
+    // Palette de couleurs pour les catégories
+    const getCategoryColor = (category: any): string => {
+      // Sécurité : la catégorie peut être un objet, null, undefined ou string
+      const rawName = (typeof category === "object" && category !== null)
+        ? (category?.name ?? "")
+        : (category ?? "");
+      const cat = String(rawName).toLowerCase();
+      if (cat.includes("immo") || cat.includes("chambre") || cat.includes("maison") || cat.includes("location")) return "#ef4444";
+      if (cat.includes("vente") || cat.includes("vendre") || cat.includes("boutique") || cat.includes("electronique") || cat.includes("ordinateur")) return "#f59e0b";
+      if (cat.includes("service") || cat.includes("emploi") || cat.includes("travail")) return "#10b981";
+      if (cat.includes("vehicule") || cat.includes("voiture") || cat.includes("moto")) return "#8b5cf6";
+      return "#3b82f6"; // Bleu (par défaut)
+    };
+
+    // Extrait le nom lisible de la catégorie (string OU objet Category de l'API)
+    const getCategoryName = (category: any): string => {
+      if (!category) return "Annonce";
+      if (typeof category === "string") return category;
+      if (typeof category === "object") return category?.name || category?.label || "Annonce";
+      return String(category);
+    };
+
+    const API_BASE = "http://localhost:8000";
+
+    // Normalise une URL d'image : ajoute le préfixe API si nécessaire
+    const normalizeImageUrl = (url: string): string => {
+      if (!url || url.trim() === "") return "";
+      if (url.startsWith("http://") || url.startsWith("https://")) return url;
+      if (url.startsWith("data:")) return url; // base64
+      
+      // Si c'est un asset local statique (ex: /category-services.jpg ou images mock locales)
+      // et que ça ne fait pas référence au dossier media/ du backend, on laisse relatif.
+      if (url.startsWith("/") && !url.startsWith("/media") && !url.startsWith("/uploads")) {
+        return url;
+      }
+      
+      // Chemin relatif vers le backend -> on ajoute le préfixe backend
+      const cleanUrl = url.replace(/^\//, "");
+      if (cleanUrl.startsWith("media") || cleanUrl.startsWith("uploads")) {
+        return `${API_BASE}/${cleanUrl}`;
+      }
+      
+      // Fallback
+      return url;
+    };
+
+    // Extrait toutes les photos d'une annonce (tableau d'URLs normalisées)
+    const getListingPhotos = (listing: any): string[] => {
+      const photos: string[] = [];
+      if (listing.image && listing.image.trim()) {
+        photos.push(normalizeImageUrl(listing.image.trim()));
+      }
+      if (listing.image_urls) {
+        listing.image_urls.split(",").forEach((u: string) => {
+          const norm = normalizeImageUrl(u.trim());
+          if (norm && !photos.includes(norm)) photos.push(norm);
+        });
+      }
+      return photos;
+    };
+
     // HTML Generator function for popup carousel
-    const buildPopupHtml = (key: string, index: number) => {
+    const buildPopupHtml = (key: string, listingIndex: number, photoIndex: number = 0) => {
       const group = grouped[key];
-      const listing = group[index];
+      const listing = group[listingIndex];
+      const categoryName = getCategoryName(listing.category);
+      const categoryColor = getCategoryColor(listing.category);
       const priceStr = typeof listing.price === "number" || !isNaN(Number(listing.price))
         ? `${Number(listing.price).toLocaleString()} ${listing.currency || "FBU"}`
         : listing.price;
 
-      // Extract first image from listing.image or listing.image_urls
-      let imageUrl = listing.image || "";
-      if (!imageUrl && listing.image_urls) {
-        imageUrl = listing.image_urls.split(",")[0].trim();
-      }
+      // Photos de l'annonce
+      const photos = getListingPhotos(listing);
+      const hasPhotos = photos.length > 0;
+      const safePhotoIdx = Math.max(0, Math.min(photoIndex, photos.length - 1));
+      const currentPhoto = photos[safePhotoIdx] || "";
 
-      const hasPrev = index > 0;
-      const hasNext = index < group.length - 1;
+      // Navigation entre annonces (même coordonnée)
+      const hasPrevListing = listingIndex > 0;
+      const hasNextListing = listingIndex < group.length - 1;
 
-      // Build listing details HTML (either from database columns or mock details)
+      // Build listing details HTML
       let resolvedDetails = listing.details;
       if (!resolvedDetails || !Array.isArray(resolvedDetails)) {
         resolvedDetails = [];
         if (listing.city) resolvedDetails.push({ label: "Ville", value: listing.city });
         if (listing.address) resolvedDetails.push({ label: "Adresse", value: listing.address });
         if (listing.views !== undefined) resolvedDetails.push({ label: "Vues", value: `${listing.views}` });
-        
-        // Dynamic extraction from description (e.g., "3 chambres" -> Chambres: 3)
         if (listing.description) {
           const desc = listing.description.toLowerCase();
           const chambreMatch = desc.match(/(\d+)\s*chambre/);
           if (chambreMatch) resolvedDetails.push({ label: "Chambres", value: chambreMatch[1] });
-          
           const sdbMatch = desc.match(/(\d+)\s*salle[s]?\s*de\s*bain/);
           if (sdbMatch) resolvedDetails.push({ label: "Salles de bain", value: sdbMatch[1] });
         }
       }
 
       const detailsHtml = resolvedDetails.length > 0
-        ? `
-          <div style="border-top: 1px dashed #e5e7eb; padding-top:6px; margin-top:6px; margin-bottom:6px; font-size:11px;">
+        ? `<div style="border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:4px;margin-bottom:6px;font-size:11px;">
             ${resolvedDetails.map((d: any) => `
-              <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
                 <span style="color:#6b7280;">${d.label}</span>
-                <span style="font-weight:600; color:#374151;">${d.value}</span>
+                <span style="font-weight:600;color:#374151;">${d.value}</span>
               </div>
             `).join("")}
-          </div>
-        `
+          </div>`
         : "";
 
-      return `
-        <div style="min-width:220px; font-family: sans-serif; position: relative;">
-          ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px;" />` : ""}
-          
-          ${group.length > 1 ? `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#f3f4f6; padding:4px 8px; border-radius:6px; margin-bottom:6px; font-size:11px; font-weight:600; color:#4b5563;">
-              <button onclick="window.__changePopupListing('${key}', ${index - 1})" ${!hasPrev ? "disabled style='opacity:0.3; cursor:default; border:none; background:none;'" : "style='cursor:pointer; border:none; background:none; color:#2563eb; font-weight:bold;'"}>◀ Précédent</button>
-              <span>${index + 1} / ${group.length}</span>
-              <button onclick="window.__changePopupListing('${key}', ${index + 1})" ${!hasNext ? "disabled style='opacity:0.3; cursor:default; border:none; background:none;'" : "style='cursor:pointer; border:none; background:none; color:#2563eb; font-weight:bold;'"}>Suivant ▶</button>
+      // Carrousel photos HTML (si plusieurs images)
+      const photosCarouselHtml = hasPhotos ? `
+        <div style="position:relative;width:100%;height:130px;background:#f3f4f6;border-radius:8px;overflow:hidden;margin-bottom:8px;">
+          <!-- Photo actuelle -->
+          <img
+            id="popup-photo-${key}"
+            src="${currentPhoto}"
+            alt="${listing.title}"
+            style="width:100%;height:100%;object-fit:cover;display:block;"
+            onerror="this.style.display='none';this.nextSibling.style.display='flex';"
+          />
+          <!-- Fallback si image cassée -->
+          <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;">
+            <span style="font-size:28px;">📷</span>
+            <span style="font-size:10px;margin-top:4px;">Image indisponible</span>
+          </div>
+
+          ${photos.length > 1 ? `
+            <!-- Flèche gauche -->
+            <button
+              onclick="window.__changePhotoIndex('${key}', ${listingIndex}, ${safePhotoIdx - 1})"
+              ${safePhotoIdx === 0 ? "disabled" : ""}
+              style="position:absolute;left:4px;top:50%;transform:translateY(-50%);
+                     background:rgba(0,0,0,0.45);color:white;border:none;border-radius:50%;
+                     width:26px;height:26px;cursor:${safePhotoIdx === 0 ? "default" : "pointer"};
+                     opacity:${safePhotoIdx === 0 ? "0.3" : "1"};
+                     font-size:12px;display:flex;align-items:center;justify-content:center;
+                     line-height:1;padding:0;">‹</button>
+            <!-- Flèche droite -->
+            <button
+              onclick="window.__changePhotoIndex('${key}', ${listingIndex}, ${safePhotoIdx + 1})"
+              ${safePhotoIdx === photos.length - 1 ? "disabled" : ""}
+              style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                     background:rgba(0,0,0,0.45);color:white;border:none;border-radius:50%;
+                     width:26px;height:26px;cursor:${safePhotoIdx === photos.length - 1 ? "default" : "pointer"};
+                     opacity:${safePhotoIdx === photos.length - 1 ? "0.3" : "1"};
+                     font-size:12px;display:flex;align-items:center;justify-content:center;
+                     line-height:1;padding:0;">›</button>
+            <!-- Dots indicateurs -->
+            <div style="position:absolute;bottom:5px;left:0;right:0;display:flex;justify-content:center;gap:4px;">
+              ${photos.map((_, i) => `
+                <button onclick="window.__changePhotoIndex('${key}', ${listingIndex}, ${i})"
+                  style="width:${i === safePhotoIdx ? "16px" : "6px"};height:6px;
+                         border-radius:3px;border:none;cursor:pointer;padding:0;
+                         background:${i === safePhotoIdx ? "white" : "rgba(255,255,255,0.5)"};
+                         transition:all 0.2s;">
+                </button>
+              `).join("")}
+            </div>
+            <!-- Compteur photos -->
+            <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.55);color:white;
+                        font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;">
+              ${safePhotoIdx + 1} / ${photos.length}
             </div>
           ` : ""}
+        </div>
+      ` : "";
 
-          <strong style="font-size:13px; color:#1f2937; display:block; margin-bottom:3px; line-height:1.3;">${listing.title}</strong>
-          <span style="color:#16a34a; font-weight:bold; font-size:13px; display:block; margin-bottom:4px;">${priceStr}</span>
-          
-          ${detailsHtml}
+      // Navigation entre plusieurs annonces au même point
+      const listingNavHtml = group.length > 1 ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    background:#f3f4f6;padding:4px 8px;border-radius:6px;margin-bottom:6px;
+                    font-size:11px;font-weight:600;color:#4b5563;">
+          <button onclick="window.__changePopupListing('${key}', ${listingIndex - 1})"
+            ${!hasPrevListing ? "disabled" : ""}
+            style="cursor:${hasPrevListing ? "pointer" : "default"};border:none;background:none;
+                   color:${hasPrevListing ? categoryColor : "#d1d5db"};font-weight:bold;font-size:13px;">
+            ‹
+          </button>
+          <span style="font-size:10px;">Annonce ${listingIndex + 1} / ${group.length}</span>
+          <button onclick="window.__changePopupListing('${key}', ${listingIndex + 1})"
+            ${!hasNextListing ? "disabled" : ""}
+            style="cursor:${hasNextListing ? "pointer" : "default"};border:none;background:none;
+                   color:${hasNextListing ? categoryColor : "#d1d5db"};font-weight:bold;font-size:13px;">
+            ›
+          </button>
+        </div>
+      ` : "";
 
-          <div style="display:flex; justify-content:space-between; align-items:center; border-top: 1px solid #e5e7eb; padding-top:8px; margin-top:6px;">
-            <a href="/annonces/${listing.id}" style="color:#2563eb; font-size:11px; font-weight:600; text-decoration:none;">Voir →</a>
-            <button onclick="window.__routeTo(${listing.latitude},${listing.longitude},'${listing.title.replace(/'/g, "\\'")}')" 
-              style="font-size:11px; color:#059669; cursor:pointer; border:none; background:none; padding:0; font-weight:600; display:flex; align-items:center; gap:2px;">
-              🗺️ Itinéraire
-            </button>
+      return `
+        <div style="min-width:240px;max-width:260px;font-family:'DM Sans',sans-serif;overflow:hidden;border-radius:12px;background:white;">
+          <!-- Bandeau catégorie coloré -->
+          <div style="background:${categoryColor};color:white;padding:6px 10px;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;align-items:center;">
+            <span>${categoryName}</span>
+            <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">★ ${listing.rating || "4.0"}</span>
+          </div>
+
+          <div style="padding:10px;">
+            ${photosCarouselHtml}
+            ${listingNavHtml}
+
+            <strong style="font-size:13px;color:#1f2937;display:block;margin-bottom:3px;line-height:1.3;font-weight:700;">${listing.title}</strong>
+            <span style="color:${categoryColor};font-weight:bold;font-size:13px;display:block;margin-bottom:4px;">${priceStr}</span>
+
+            ${detailsHtml}
+
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:6px;">
+              <a href="/annonces/${listing.id}"
+                style="color:${categoryColor};font-size:11px;font-weight:bold;text-decoration:none;
+                       background:${categoryColor}18;padding:4px 8px;border-radius:6px;">
+                Voir l'annonce →
+              </a>
+              <button onclick="window.__routeTo(${listing.latitude},${listing.longitude},'${listing.title.replace(/'/g, "\\'")}')"
+                style="font-size:11px;color:#059669;cursor:pointer;border:none;background:#05966915;
+                       padding:4px 8px;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:3px;">
+                🗺️ Itinéraire
+              </button>
+            </div>
           </div>
         </div>
       `;
     };
     (window as any).__buildPopupHtml = buildPopupHtml;
 
+
     // Create markers
     Object.keys(grouped).forEach((key) => {
       const group = grouped[key];
       const first = group[0];
+      const color = getCategoryColor(first.category || "Autre");
       (window as any).__popupStates[key] = 0;
 
-      const marker = L.marker([first.latitude, first.longitude])
+      // Premium 3D Compass / Punaise Pin Marker
+      const icon = L.divIcon({
+        className: "",
+        iconSize: [34, 42],
+        iconAnchor: [17, 42],
+        popupAnchor: [0, -40],
+        html: `
+          <div style="position:relative; width:34px; height:42px; display:flex; flex-direction:column; align-items:center;">
+            <!-- Ovale d'ombre au sol -->
+            <div style="position:absolute; bottom:0; left:9px; width:16px; height:5px; background:rgba(0,0,0,0.3); border-radius:50%; filter:blur(1px);"></div>
+            
+            <!-- Aiguille en métal de la boussole/punaise -->
+            <div style="position:absolute; bottom:4px; width:2px; height:20px; background:#b8b8b8; border-right:1px solid #949494; z-index:1;"></div>
+            
+            <!-- Boule brillante en 3D avec dégradé radial pour le relief sphérique -->
+            <div style="
+              position:absolute;
+              top:0;
+              width:24px;
+              height:24px;
+              border-radius:50%;
+              background: radial-gradient(circle at 7px 7px, #ffffff 0%, ${color} 50%, #000000 100%);
+              box-shadow: 0 4px 6px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.4);
+              z-index:2;
+            ">
+              <!-- Point de brillance spéculaire blanc additionnel pour effet de verre/plastique brillant -->
+              <div style="position:absolute; top:3px; left:4px; width:5px; height:5px; background:rgba(255,255,255,0.7); border-radius:50%; filter:blur(0.5px);"></div>
+            </div>
+          </div>
+        `,
+      });
+
+      const marker = L.marker([first.latitude, first.longitude], { icon })
         .addTo(map)
-        .bindPopup(buildPopupHtml(key, 0));
+        .bindPopup(buildPopupHtml(key, 0), {
+          className: "custom-premium-popup",
+          maxWidth: 260,
+        });
 
       (window as any).__popupMarkers[key] = marker;
       markersRef.current.push(marker);
@@ -263,15 +521,51 @@ export default function Carte() {
     (window as any).__routeTo = (lat: number, lng: number, title: string) => {
       setRouteTarget({ lat, lng, title });
     };
-    (window as any).__popupStates = {};
+
+    // État double : annonce active + photo active par marker-key
+    (window as any).__popupStates = {};   // { [key]: listingIndex }
+    (window as any).__photoStates  = {};  // { [key]: photoIndex }
+
+    // Changer d'annonce (plusieurs annonces au même point)
     (window as any).__changePopupListing = (key: string, index: number) => {
       const group = (window as any).__popupGroups?.[key];
       if (!group || index < 0 || index >= group.length) return;
       (window as any).__popupStates[key] = index;
-      
+      (window as any).__photoStates[key] = 0; // réinitialise les photos
       const marker = (window as any).__popupMarkers?.[key];
       if (marker) {
-        const html = (window as any).__buildPopupHtml(key, index);
+        const html = (window as any).__buildPopupHtml(key, index, 0);
+        marker.setPopupContent(html);
+      }
+    };
+
+    // Changer de photo dans le carrousel
+    (window as any).__changePhotoIndex = (key: string, listingIndex: number, photoIndex: number) => {
+      const group = (window as any).__popupGroups?.[key];
+      if (!group) return;
+      const listing = group[listingIndex];
+      if (!listing) return;
+      // Extraire les photos côté callback (même logique que getListingPhotos)
+      const API_BASE = "http://localhost:8000";
+      const norm = (url: string) => {
+        if (!url || !url.trim()) return "";
+        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+        return `${API_BASE}/${url.replace(/^\//, "")}`;
+      };
+      const photos: string[] = [];
+      if (listing.image?.trim()) photos.push(norm(listing.image.trim()));
+      if (listing.image_urls) {
+        listing.image_urls.split(",").forEach((u: string) => {
+          const n = norm(u.trim());
+          if (n && !photos.includes(n)) photos.push(n);
+        });
+      }
+      const safeIdx = Math.max(0, Math.min(photoIndex, photos.length - 1));
+      (window as any).__photoStates[key] = safeIdx;
+      (window as any).__popupStates[key] = listingIndex;
+      const marker = (window as any).__popupMarkers?.[key];
+      if (marker) {
+        const html = (window as any).__buildPopupHtml(key, listingIndex, safeIdx);
         marker.setPopupContent(html);
       }
     };
@@ -279,12 +573,15 @@ export default function Carte() {
     return () => {
       delete (window as any).__routeTo;
       delete (window as any).__popupStates;
+      delete (window as any).__photoStates;
       delete (window as any).__changePopupListing;
+      delete (window as any).__changePhotoIndex;
       delete (window as any).__popupGroups;
       delete (window as any).__popupMarkers;
       delete (window as any).__buildPopupHtml;
     };
   }, []);
+
 
   // Calculate and draw route
   const calculateRoute = useCallback(async () => {
@@ -374,6 +671,8 @@ export default function Carte() {
             </div>
             {/* Category select dropdown */}
             <select
+              id="carte-category"
+              name="carte-category"
               value={selectedCategory ?? "all"}
               onChange={(e) => setSelectedCategory(e.target.value === "all" ? null : Number(e.target.value))}
               className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[200px]"

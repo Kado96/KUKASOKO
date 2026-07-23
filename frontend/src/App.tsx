@@ -23,6 +23,8 @@ import Marchand from "./pages/Marchand";
 import NotFound from "./pages/NotFound";
 import Chatbot from "./components/Chatbot";
 import NewsTicker from "./components/NewsTicker";
+import { MobileBottomNav } from "./components/MobileBottomNav";
+import { SplashScreen } from "./components/SplashScreen";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <SplashScreen />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <SiteProvider>
           <NewsTickerProvider>
@@ -54,6 +57,7 @@ const App = () => (
             </Routes>
             <Chatbot />
             <NewsTicker />
+            <MobileBottomNav />
             </AuthProvider>
           </NewsTickerProvider>
         </SiteProvider>

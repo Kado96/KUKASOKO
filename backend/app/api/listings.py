@@ -9,15 +9,15 @@ from app.auth import get_current_user
 router = APIRouter()
 
 
-def save_upload(file: UploadFile) -> str:
+def save_upload(file: UploadFile, category: str = "listing") -> str:
     """Save an uploaded file and return its public path."""
-    ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{ext}"
-    dest = os.path.join(settings.upload_dir, "listings", filename)
+    ext = os.path.splitext(file.filename or "file")[1] or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = os.path.join(settings.upload_dir, category, filename)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    return f"/uploads/listings/{filename}"
+    return f"media/{category}/{filename}"
 
 
 @router.get("/", response_model=List[schemas.ListingOut])
@@ -95,21 +95,40 @@ def create_listing(
 
 
 @router.post("/{listing_id}/images")
-def upload_listing_images(
+async def upload_listing_images(
     listing_id: int,
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Téléverser des images pour une annonce."""
+    """Téléverser des images pour une annonce et les cataloguer dans la médiathèque centralisée."""
     listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
     if not listing or listing.seller_id != current_user.id:
         raise HTTPException(status_code=404, detail="Annonce introuvable ou accès refusé")
 
-    paths = [save_upload(f) for f in files]
+    paths = []
+    for file in files:
+        rel_path = save_upload(file, "listing")
+        public_url = f"http://localhost:8000/{rel_path}"
+        paths.append(public_url)
+
+        # Enregistrement dans la médiathèque
+        media_record = models.MediaFile(
+            filename=file.filename or "listing_image",
+            file_path=rel_path,
+            url=public_url,
+            mime_type=file.content_type or "image/jpeg",
+            storage_provider="local",
+            media_category="listing",
+            related_listing_id=listing_id,
+            uploaded_by=current_user.id,
+        )
+        db.add(media_record)
+
     existing = listing.image_urls.split(",") if listing.image_urls else []
     listing.image_urls = ",".join(filter(None, existing + paths))
     db.commit()
+    db.refresh(listing)
     return {"image_urls": paths}
 
 

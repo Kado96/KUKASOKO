@@ -134,7 +134,7 @@ const NewsTicker = () => {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[100] flex items-stretch select-none"
+      className="fixed bottom-[52px] md:bottom-0 left-0 right-0 z-[100] flex items-stretch select-none shadow-md"
       style={{ height: "44px" }}
     >
       {/* ── Red label ── */}

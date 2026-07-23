@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Send, MapPin, Paperclip, Search, MessageCircle, Loader2 } from "lucide-react";
+import { Send, MapPin, Paperclip, Search, MessageCircle, Loader2, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { toast } from "@/hooks/use-toast";
@@ -44,12 +44,14 @@ const formatTime = (isoOrTime: string) => {
 const Messages = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, playNotificationSound } = useAuth();
-  const { location } = useUserLocation();
+  const { location, requestLocation, loading: locLoading } = useUserLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
   const [convLoading, setConvLoading] = useState(true);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not logged in
@@ -63,6 +65,11 @@ const Messages = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     setConvLoading(true);
+
+    // Read ?user= param from URL if present
+    const params = new URLSearchParams(window.location.search);
+    const targetUserId = params.get("user") ? Number(params.get("user")) : null;
+
     messagesAPI
       .getConversations()
       .then((res) => {
@@ -73,27 +80,66 @@ const Messages = () => {
           last_message_time: string;
           unread_count: number;
         }>;
-        setConversations(
-          apiConvs.map((c) => ({
-            id: c.partner_id,
-            name: c.partner_name,
-            avatar: c.partner_name.charAt(0).toUpperCase(),
-            lastMessage: c.last_message,
-            time: formatTime(c.last_message_time),
-            unread: c.unread_count,
-            online: false,
+
+        let formattedConvs = apiConvs.map((c) => ({
+          id: c.partner_id,
+          name: c.partner_name,
+          avatar: c.partner_name.charAt(0).toUpperCase(),
+          lastMessage: c.last_message,
+          time: formatTime(c.last_message_time),
+          unread: c.unread_count,
+          online: false,
+          messages: [],
+          loaded: false,
+        }));
+
+        // If targetUserId specified and not in list, create a new conversation placeholder
+        if (targetUserId && !formattedConvs.some((c) => c.id === targetUserId)) {
+          const newConv: Conversation = {
+            id: targetUserId,
+            name: `Vendeur / Utilisateur #${targetUserId}`,
+            avatar: "V",
+            lastMessage: "Démarrez la discussion...",
+            time: "À l'instant",
+            unread: 0,
+            online: true,
             messages: [],
-            loaded: false,
-          }))
-        );
-        if (apiConvs.length > 0) setActiveId(apiConvs[0].partner_id);
+            loaded: true,
+          };
+          formattedConvs = [newConv, ...formattedConvs];
+          setActiveId(targetUserId);
+        } else if (targetUserId) {
+          setActiveId(targetUserId);
+        } else if (apiConvs.length > 0) {
+          setActiveId(apiConvs[0].partner_id);
+        }
+
+        setConversations(formattedConvs);
       })
       .catch(() => {
-        // If no conversations yet, show empty state
-        setConversations([]);
+        // If no conversations exist yet
+        if (targetUserId) {
+          setConversations([
+            {
+              id: targetUserId,
+              name: `Vendeur / Utilisateur #${targetUserId}`,
+              avatar: "V",
+              lastMessage: "Démarrez la discussion...",
+              time: "À l'instant",
+              unread: 0,
+              online: true,
+              messages: [],
+              loaded: true,
+            },
+          ]);
+          setActiveId(targetUserId);
+        } else {
+          setConversations([]);
+        }
       })
       .finally(() => setConvLoading(false));
   }, [isAuthenticated]);
+
 
   // Load messages for active conversation
   useEffect(() => {
@@ -243,14 +289,25 @@ const Messages = () => {
 
   const sharePosition = () => {
     if (!location) {
+      // Auto-request GPS if not yet granted
+      requestLocation();
       toast({
-        title: "Position non disponible",
-        description: "Activez d'abord votre position depuis la bannière.",
+        title: "Activation GPS en cours…",
+        description: "Acceptez l'accès à votre position dans le navigateur, puis réessayez.",
       });
       return;
     }
-    sendMessage("", { lat: location.lat, lng: location.lng });
-    toast({ title: "Position partagée ✅" });
+    // Show confirmation modal before sending
+    setPendingLocation({ lat: location.lat, lng: location.lng });
+    setShowLocationModal(true);
+  };
+
+  const confirmSendLocation = () => {
+    if (!pendingLocation) return;
+    sendMessage("", pendingLocation);
+    toast({ title: "📍 Position partagée avec succès !" });
+    setShowLocationModal(false);
+    setPendingLocation(null);
   };
 
   const active = conversations.find((c) => c.id === activeId);
@@ -410,18 +467,42 @@ const Messages = () => {
                               }`}
                             >
                               {m.location ? (
-                                <div className="pr-10">
-                                  <div className="flex items-center gap-1 font-semibold mb-1 text-accent dark:text-emerald-400">
-                                    <MapPin className="w-3.5 h-3.5" /> Position partagée
+                                <div className="w-[220px] sm:w-[260px]">
+                                  <div className="flex items-center gap-1.5 font-semibold mb-2 text-accent dark:text-emerald-400 text-xs">
+                                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{isMe ? "Ma position" : "Sa position"}</span>
                                   </div>
-                                  <a
-                                    href={`https://www.openstreetmap.org/?mlat=${m.location.lat}&mlon=${m.location.lng}#map=15/${m.location.lat}/${m.location.lng}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="underline text-xs opacity-90 block hover:text-accent"
-                                  >
-                                    {m.location.lat.toFixed(5)}, {m.location.lng.toFixed(5)}
-                                  </a>
+                                  {/* Inline OpenStreetMap map preview */}
+                                  <div className="rounded-lg overflow-hidden border border-white/30 mb-2 relative">
+                                    <iframe
+                                      title="position"
+                                      width="100%"
+                                      height="140"
+                                      loading="lazy"
+                                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${m.location.lng - 0.008},${m.location.lat - 0.006},${m.location.lng + 0.008},${m.location.lat + 0.006}&layer=mapnik&marker=${m.location.lat},${m.location.lng}`}
+                                      className="w-full block"
+                                      style={{ border: 0 }}
+                                    />
+                                  </div>
+                                  {/* Navigation buttons */}
+                                  <div className="flex gap-1.5 pb-6">
+                                    <a
+                                      href={`https://www.google.com/maps/dir/?api=1&destination=${m.location.lat},${m.location.lng}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 px-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                                    >
+                                      <Navigation className="w-3 h-3" /> Google Maps
+                                    </a>
+                                    <a
+                                      href={`https://waze.com/ul?ll=${m.location.lat},${m.location.lng}&navigate=yes`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 px-2 rounded-md bg-sky-500 hover:bg-sky-600 text-white transition-colors"
+                                    >
+                                      🚗 Waze
+                                    </a>
+                                  </div>
                                 </div>
                               ) : (
                                 <p className="whitespace-pre-wrap pr-12">{m.text}</p>
@@ -453,14 +534,22 @@ const Messages = () => {
                     }}
                     className="p-2.5 bg-[#f0f2f5] dark:bg-zinc-800 flex items-center gap-2 shrink-0 border-t border-border"
                   >
-                    <button
-                      type="button"
-                      onClick={sharePosition}
-                      title="Partager ma position"
-                      className="w-9 h-9 rounded-full hover:bg-secondary/80 text-muted-foreground flex items-center justify-center transition-colors shrink-0"
-                    >
-                      <MapPin className="w-5 h-5 text-[#54656f] dark:text-[#aebac1]" />
-                    </button>
+                     <button
+                       type="button"
+                       onClick={sharePosition}
+                       title={location ? "Partager ma position GPS" : "Activer le GPS"}
+                       className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 ${
+                         location
+                           ? "hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400"
+                           : "hover:bg-secondary/80 text-[#54656f] dark:text-[#aebac1]"
+                       }`}
+                     >
+                       {locLoading ? (
+                         <Loader2 className="w-5 h-5 animate-spin" />
+                       ) : (
+                         <MapPin className={`w-5 h-5 ${location ? "fill-green-500 text-green-600" : ""}`} />
+                       )}
+                     </button>
                     <button
                       type="button"
                       title="Bientôt disponible"
@@ -488,20 +577,92 @@ const Messages = () => {
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground bg-[#efeae2] dark:bg-[#0b141a]">
-                  <div className="text-center bg-white/80 dark:bg-zinc-800/80 p-6 rounded-2xl shadow-sm border border-border/40 backdrop-blur-sm max-w-sm mx-4">
-                    <div className="w-16 h-16 bg-[#25d366]/10 text-[#25d366] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="text-center bg-white/90 dark:bg-zinc-800/90 p-8 rounded-2xl shadow-lg border border-border/50 backdrop-blur-sm max-w-sm mx-4 space-y-4">
+                    <div className="w-16 h-16 bg-[#25d366]/10 text-[#25d366] rounded-full flex items-center justify-center mx-auto">
                       <MessageCircle className="w-8 h-8" />
                     </div>
-                    <h3 className="font-bold text-foreground text-base mb-1">Isoko Chat</h3>
-                    <p className="text-xs text-muted-foreground">Sélectionnez une conversation dans la liste pour commencer à échanger en toute sécurité.</p>
+                    <div>
+                      <h3 className="font-bold text-foreground text-lg mb-1">Isoko Chat</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Vous n'avez pas encore de conversation active. Parcourez les annonces pour contacter un vendeur.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => navigate("/annonces")}
+                      className="w-full bg-[#00a884] hover:bg-[#008f72] text-white font-semibold text-xs"
+                    >
+                      Parcourir les annonces
+                    </Button>
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>
       </main>
       <Footer />
+
+      {/* GPS Location Confirmation Modal */}
+      {showLocationModal && pendingLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-card rounded-2xl shadow-2xl border border-border p-6 max-w-sm w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-foreground">Partager ma position</h3>
+              </div>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Map preview */}
+            <div className="rounded-xl overflow-hidden border border-border">
+              <iframe
+                title="preview-position"
+                width="100%"
+                height="160"
+                loading="lazy"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${pendingLocation.lng - 0.008},${pendingLocation.lat - 0.006},${pendingLocation.lng + 0.008},${pendingLocation.lat + 0.006}&layer=mapnik&marker=${pendingLocation.lat},${pendingLocation.lng}`}
+                className="w-full block"
+                style={{ border: 0 }}
+              />
+            </div>
+
+            {/* Coordinates */}
+            <p className="text-xs text-muted-foreground text-center">
+              📍 {pendingLocation.lat.toFixed(5)}, {pendingLocation.lng.toFixed(5)}
+            </p>
+            <p className="text-xs text-center text-muted-foreground">
+              Votre position sera visible par <strong>{conversations.find(c => c.id === activeId)?.name ?? "votre interlocuteur"}</strong>. Il pourra naviguer vers vous.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowLocationModal(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={confirmSendLocation}
+              >
+                <MapPin className="w-4 h-4 mr-1.5" /> Envoyer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,7 +6,7 @@ import { useUserLocation, haversineKm, formatDistance } from "@/hooks/useUserLoc
 import { allListings } from "@/data/listings";
 
 import { useEffect, useState } from "react";
-import { listingsAPI } from "@/services/api";
+import { listingsAPI, API_BASE } from "@/services/api";
 
 const NearMeSection = () => {
   const { location, loading, requestLocation } = useUserLocation();
@@ -24,9 +24,9 @@ const NearMeSection = () => {
             price: l.price > 0 ? `${l.price.toLocaleString("fr-BI")} ${l.currency || "BIF"}` : "Sur devis",
             image: (() => {
               const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
-              if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+              if (!rawImg) return `${API_BASE}/media/listing/category-avendre.jpg`;
               if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
-              return `http://localhost:8000/${rawImg}`;
+              return `${API_BASE}/${rawImg}`;
             })(),
             location: {
               lat: l.latitude || -3.38,

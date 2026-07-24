@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import categoryImmobilier from "@/assets/category-immobilier.jpg";
 import { useAuth } from "@/contexts/AuthContext";
-import { merchantsAPI, messagesAPI, listingsAPI } from "@/services/api";
+import { merchantsAPI, messagesAPI, listingsAPI, API_BASE } from "@/services/api";
 import { useChatWebSocket } from "@/hooks/useWebSocket";
 import { useUserLocation } from "@/hooks/useUserLocation";
 
@@ -422,9 +422,9 @@ const MaBoutique = () => {
           category: l.category?.name_fr || l.category?.name || "À vendre",
           image: (() => {
             const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
-            if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+            if (!rawImg) return `${API_BASE}/media/listing/category-avendre.jpg`;
             if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
-            return `http://localhost:8000/${rawImg}`;
+            return `${API_BASE}/${rawImg}`;
           })()
         }));
         setMyListings(filtered);

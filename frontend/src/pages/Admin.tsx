@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSite, THEMES } from "@/contexts/SiteContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { usersAPI, mediaAPI, listingsAPI } from "@/services/api";
+import { usersAPI, mediaAPI, listingsAPI, API_BASE } from "@/services/api";
 import { Copy, FolderOpen, HardDrive, Database } from "lucide-react";
 
 type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau";
@@ -219,11 +219,11 @@ const Admin = () => {
           rating: 4.5,
           reviews: 0,
           date: new Date(l.created_at || Date.now()).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }),
-          image: (() => {
+            image: (() => {
             const rawImg = l.image || (l.image_urls ? l.image_urls.split(",")[0] : null);
-            if (!rawImg) return "http://localhost:8000/media/listing/category-avendre.jpg";
+            if (!rawImg) return `${API_BASE}/media/listing/category-avendre.jpg`;
             if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
-            return `http://localhost:8000/${rawImg}`;
+            return `${API_BASE}/${rawImg}`;
           })(),
           location: { lat: l.latitude || -3.38, lng: l.longitude || 29.36, address: l.city || "Bujumbura" }
         }));

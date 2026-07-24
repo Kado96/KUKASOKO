@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Download, Copy, Check, Code, Share2, Sparkles, Layers, Image as ImageIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE } from "@/services/api";
 
 interface TemplateStudioModalProps {
   isOpen: boolean;
@@ -52,13 +53,13 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
   const formattedPrice = typeof listing.price === "number" ? `${listing.price} Fbu` : listing.price || "Sur devis";
   const rawImageSrc = listing.image || (listing.image_urls ? listing.image_urls.split(",")[0] : "");
   const imageSrc = (() => {
-    if (!rawImageSrc) return "http://localhost:8000/media/listing/category-avendre.jpg";
+    if (!rawImageSrc) return `${API_BASE}/media/listing/category-avendre.jpg`;
     if (rawImageSrc.startsWith("http://") || rawImageSrc.startsWith("https://") || rawImageSrc.startsWith("data:")) return rawImageSrc;
     if (rawImageSrc.startsWith("/") || rawImageSrc.startsWith("assets/") || rawImageSrc.startsWith("category-")) {
       const clean = rawImageSrc.startsWith("/") ? rawImageSrc : `/${rawImageSrc}`;
       return `${window.location.origin}${clean}`;
     }
-    return `http://localhost:8000/${rawImageSrc}`;
+    return `${API_BASE}/${rawImageSrc}`;
   })();
   const displayDate = listing.date || (listing.created_at ? new Date(listing.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "16 NOV 2021");
 

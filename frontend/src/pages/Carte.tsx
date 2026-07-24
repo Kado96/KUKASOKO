@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useUserLocation } from "@/hooks/useUserLocation";
-import { listingsAPI, mapAPI } from "@/services/api";
+import { listingsAPI, mapAPI, API_BASE } from "@/services/api";
 import { MapPin, Navigation, Loader2, Route, Car, Bike, PersonStanding, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -162,11 +162,11 @@ export default function Carte() {
           if (!listing) return;
 
           // Extraire les photos
-          const API_BASE = "http://localhost:8000";
+          const API_BASE_URL = API_BASE;
           const norm = (url: string) => {
             if (!url || !url.trim()) return "";
             if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
-            return `${API_BASE}/${url.replace(/^\//, "")}`;
+            return `${API_BASE_URL}/${url.replace(/^\//, "")}`;
           };
           const photos: string[] = [];
           if (listing.image?.trim()) photos.push(norm(listing.image.trim()));
@@ -263,7 +263,7 @@ export default function Carte() {
       return String(category);
     };
 
-    const API_BASE = "http://localhost:8000";
+    const API_BASE_URL = API_BASE;
 
     // Normalise une URL d'image : ajoute le préfixe API si nécessaire
     const normalizeImageUrl = (url: string): string => {
@@ -279,9 +279,7 @@ export default function Carte() {
       
       // Chemin relatif vers le backend -> on ajoute le préfixe backend
       const cleanUrl = url.replace(/^\//, "");
-      if (cleanUrl.startsWith("media") || cleanUrl.startsWith("uploads")) {
-        return `${API_BASE}/${cleanUrl}`;
-      }
+      return `${API_BASE_URL}/${cleanUrl}`;
       
       // Fallback
       return url;
@@ -546,11 +544,11 @@ export default function Carte() {
       const listing = group[listingIndex];
       if (!listing) return;
       // Extraire les photos côté callback (même logique que getListingPhotos)
-      const API_BASE = "http://localhost:8000";
+      const API_BASE_URL = API_BASE;
       const norm = (url: string) => {
         if (!url || !url.trim()) return "";
         if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
-        return `${API_BASE}/${url.replace(/^\//, "")}`;
+        return `${API_BASE_URL}/${url.replace(/^\//, "")}`;
       };
       const photos: string[] = [];
       if (listing.image?.trim()) photos.push(norm(listing.image.trim()));

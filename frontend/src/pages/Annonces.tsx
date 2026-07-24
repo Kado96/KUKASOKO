@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { allListings } from "@/data/listings";
 import ShareModal from "@/components/ShareModal";
 
-import { listingsAPI } from "@/services/api";
+import { listingsAPI, API_BASE } from "@/services/api";
 
 const Annonces = () => {
   const [searchParams] = useSearchParams();
@@ -47,16 +47,16 @@ const Annonces = () => {
                 if (l.seller?.avatar_url) {
                   const avatar = l.seller.avatar_url;
                   if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
-                  return `http://localhost:8000/${avatar}`;
+                  return `${API_BASE}/${avatar}`;
                 }
                 // Fallback sur image par défaut de catégorie
                 const cat = (l.category?.name_fr || l.category?.name || "").toLowerCase();
-                if (cat.includes("immobilier")) return "http://localhost:8000/media/listing/category-immobilier.jpg";
-                if (cat.includes("service")) return "http://localhost:8000/media/listing/category-services.jpg";
-                return "http://localhost:8000/media/listing/category-avendre.jpg";
+                if (cat.includes("immobilier")) return `${API_BASE}/media/listing/category-immobilier.jpg`;
+                if (cat.includes("service")) return `${API_BASE}/media/listing/category-services.jpg`;
+                return `${API_BASE}/media/listing/category-avendre.jpg`;
               }
               if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
-              return `http://localhost:8000/${rawImg}`;
+              return `${API_BASE}/${rawImg}`;
             })(),
             category: l.category?.name_fr || l.category?.name || "À vendre",
             categoryId: String(l.category_id),

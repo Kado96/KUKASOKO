@@ -12,7 +12,7 @@ import { allListings } from "@/data/listings";
 import { toast } from "@/hooks/use-toast";
 import ShareModal from "@/components/ShareModal";
 import { TemplateStudioModal } from "@/components/TemplateStudioModal";
-import { reviewsAPI, listingsAPI } from "@/services/api";
+import { reviewsAPI, listingsAPI, API_BASE } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 const AnnonceDetail = () => {
@@ -60,15 +60,15 @@ const AnnonceDetail = () => {
                 if (l.seller?.avatar_url) {
                   const avatar = l.seller.avatar_url;
                   if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
-                  return `http://localhost:8000/${avatar}`;
+                  return `${API_BASE}/${avatar}`;
                 }
                 const cat = (l.category?.name_fr || l.category?.name || "").toLowerCase();
-                if (cat.includes("immobilier")) return "http://localhost:8000/media/listing/category-immobilier.jpg";
-                if (cat.includes("service")) return "http://localhost:8000/media/listing/category-services.jpg";
-                return "http://localhost:8000/media/listing/category-avendre.jpg";
+                if (cat.includes("immobilier")) return `${API_BASE}/media/listing/category-immobilier.jpg`;
+                if (cat.includes("service")) return `${API_BASE}/media/listing/category-services.jpg`;
+                return `${API_BASE}/media/listing/category-avendre.jpg`;
               }
               if (rawImg.startsWith("http://") || rawImg.startsWith("https://")) return rawImg;
-              return `http://localhost:8000/${rawImg}`;
+              return `${API_BASE}/${rawImg}`;
             })(),
             image_urls: l.image_urls || l.image || "",
             category: l.category?.name_fr || l.category?.name || "À vendre",
@@ -114,7 +114,7 @@ const AnnonceDetail = () => {
   // Autoplay timer for detail images (3s)
   useEffect(() => {
     if (!listing) return;
-    const API_BASE = "http://localhost:8000";
+    const API_BASE_URL = API_BASE;
     const norm = (url: string) => {
       if (!url || !url.trim()) return "";
       if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
@@ -126,7 +126,7 @@ const AnnonceDetail = () => {
       }
       const cleanUrl = url.replace(/^\//, "");
       if (cleanUrl.startsWith("media") || cleanUrl.startsWith("uploads")) {
-        return `${API_BASE}/${cleanUrl}`;
+        return `${API_BASE_URL}/${cleanUrl}`;
       }
       return url;
     };
@@ -242,7 +242,7 @@ const AnnonceDetail = () => {
                   {/* Image Carousel with 3s Autoplay */}
                   <div className="rounded-xl overflow-hidden mb-6 relative group bg-secondary/30">
                     {(() => {
-                      const API_BASE = "http://localhost:8000";
+                      const API_BASE_URL = API_BASE;
                       const norm = (url: string) => {
                         if (!url || !url.trim()) return "";
                         if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;

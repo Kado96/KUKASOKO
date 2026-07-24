@@ -57,7 +57,6 @@ const App = () => (
             </Routes>
             <Chatbot />
             <NewsTicker />
-            <MobileBottomNav />
             </AuthProvider>
           </NewsTickerProvider>
         </SiteProvider>

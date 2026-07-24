@@ -9,15 +9,47 @@ from app.auth import get_current_user
 router = APIRouter()
 
 
-def save_upload(file: UploadFile, category: str = "listing") -> str:
-    """Save an uploaded file and return its public path."""
+import httpx
+
+# Supabase Storage configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://myceoydtlctqampztttt.supabase.co")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_BUCKET = "media"
+
+
+async def upload_to_supabase(file: UploadFile, category: str = "listing") -> str:
+    """Upload a file to Supabase Storage and return its public URL."""
     ext = os.path.splitext(file.filename or "file")[1] or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
-    dest = os.path.join(settings.upload_dir, category, filename)
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    return f"media/{category}/{filename}"
+    supabase_path = f"{category}/{filename}"
+
+    content = await file.read()
+    content_type = file.content_type or "image/jpeg"
+
+    # If no Supabase key configured, fallback to local save
+    if not SUPABASE_SERVICE_KEY:
+        dest = os.path.join("media", category, filename)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "wb") as f:
+            f.write(content)
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        return f"{backend_url}/media/{category}/{filename}"
+
+    upload_url = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{supabase_path}"
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": content_type,
+        "x-upsert": "true",
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(upload_url, content=content, headers=headers)
+        if resp.status_code not in (200, 201):
+            raise HTTPException(status_code=500, detail=f"Image upload failed: {resp.text}")
+
+    public_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{supabase_path}"
+    return public_url
+
 
 
 @router.get("/", response_model=List[schemas.ListingOut])
@@ -108,17 +140,16 @@ async def upload_listing_images(
 
     paths = []
     for file in files:
-        rel_path = save_upload(file, "listing")
-        public_url = f"http://localhost:8000/{rel_path}"
+        public_url = await upload_to_supabase(file, "listing")
         paths.append(public_url)
 
         # Enregistrement dans la médiathèque
         media_record = models.MediaFile(
             filename=file.filename or "listing_image",
-            file_path=rel_path,
+            file_path=public_url,
             url=public_url,
             mime_type=file.content_type or "image/jpeg",
-            storage_provider="local",
+            storage_provider="supabase",
             media_category="listing",
             related_listing_id=listing_id,
             uploaded_by=current_user.id,

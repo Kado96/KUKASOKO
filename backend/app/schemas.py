@@ -80,6 +80,7 @@ class ListingCreate(BaseModel):
     address: Optional[str] = None
     city: str = "Bujumbura"
     category_id: Optional[int] = None
+    image_urls: Optional[str] = None  # Comma-separated URLs from frontend upload
 
 
 class ListingOut(BaseModel):

@@ -118,7 +118,31 @@ def create_listing(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Publier une nouvelle annonce."""
+    """Publier une nouvelle annonce.
+    
+    Règle métier :
+    - Client simple (role=user) : 1 annonce maximum.
+    - Marchand / Admin : annonces illimitées.
+    """
+    # ── Règle : client simple limité à 1 annonce ─────────────────────────────
+    if current_user.role == models.UserRole.user:
+        existing_count = (
+            db.query(models.Listing)
+            .filter(
+                models.Listing.seller_id == current_user.id,
+                models.Listing.status != models.ListingStatus.sold,
+            )
+            .count()
+        )
+        if existing_count >= 1:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Les clients sans boutique ne peuvent publier qu'une seule annonce active. "
+                    "Créez votre boutique pour publier plusieurs annonces."
+                ),
+            )
+
     listing = models.Listing(**listing_data.model_dump(), seller_id=current_user.id)
     db.add(listing)
     db.commit()

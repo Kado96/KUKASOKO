@@ -22,7 +22,8 @@ const defaultCategories = [
 
 const AjouterAnnonce = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const isMerchant = user?.role === "merchant" || user?.role === "admin";
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
@@ -164,17 +165,12 @@ const AjouterAnnonce = () => {
         address: location || "Position GPS de l'annonceur",
         city: "Bujumbura",
         category_id: Number(categoryId),
-        image: images[0] || "", 
-        image_urls: images.join(","), 
+        image_urls: images.join(","),
       };
 
       console.log("[AjouterAnnonce] Payload envoyé:", payload);
       const response = await listingsAPI.create(payload);
       console.log("[AjouterAnnonce] Réponse backend:", response.data);
-      toast({ 
-        title: "Annonce enregistrée ! 🎉", 
-        description: "Choisissez maintenant votre pack de publication..."
-      });
       
       // Reset formulaire
       setTitle("");
@@ -185,8 +181,20 @@ const AjouterAnnonce = () => {
       setPhone("");
       setImages([]);
 
-      // 2. Redirige vers /boutique pour choisir un pack d'abonnement
-      navigate("/boutique");
+      // Redirection selon le rôle
+      if (isMerchant) {
+        toast({ 
+          title: "Annonce publiée ! 🎉", 
+          description: "Votre annonce est maintenant visible sur le marketplace."
+        });
+        navigate("/ma-boutique");
+      } else {
+        toast({ 
+          title: "Annonce publiée ! 🎉", 
+          description: "Votre annonce est en ligne. Créez une boutique pour publier plusieurs annonces."
+        });
+        navigate("/annonces");
+      }
     } catch (err: any) {
       // Log complet pour déboguer
       console.error("[AjouterAnnonce] Erreur complète:", err);
@@ -195,6 +203,17 @@ const AjouterAnnonce = () => {
 
       // Si 401 : l'intercepteur redirige déjà, on ne fait rien
       if (err?.response?.status === 401) return;
+
+      // 403 = limite d'annonces atteinte pour un client simple
+      if (err?.response?.status === 403) {
+        toast({
+          title: "Limite atteinte",
+          description: "Vous avez déjà une annonce active. Créez une boutique pour publier plusieurs annonces.",
+          variant: "destructive"
+        });
+        navigate("/boutique");
+        return;
+      }
 
       const errorMsg = Array.isArray(err?.response?.data?.detail)
         ? err.response.data.detail.map((d: any) => `${d.loc?.join(" -> ")}: ${d.msg}`).join(", ")
@@ -408,24 +427,36 @@ const AjouterAnnonce = () => {
               </div>
             </div>
 
-            {/* Bannière : Pack de publication */}
-            <div className="rounded-xl border border-[#febb2d]/40 bg-[#febb2d]/8 p-4 flex items-start gap-3">
-              <span className="text-2xl leading-none mt-0.5">📦</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">Publication via un pack d'abonnement</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Après avoir enregistré votre annonce, vous serez redirigé vers la page{" "}
-                  <button
-                    type="button"
-                    onClick={() => navigate("/boutique")}
-                    className="text-[#c8911f] font-semibold underline underline-offset-2 hover:text-[#febb2d]"
-                  >
-                    Boutique
-                  </button>{" "}
-                  pour choisir votre pack de publication. <strong>Actuellement gratuit</strong> pendant la phase de lancement 🎉
-                </p>
+            {/* Bannière : info selon le rôle */}
+            {isMerchant ? (
+              <div className="rounded-xl border border-[#febb2d]/40 bg-[#febb2d]/8 p-4 flex items-start gap-3">
+                <span className="text-2xl leading-none mt-0.5">🏪</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Publication Boutique</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    En tant que marchand, vous pouvez publier autant d'annonces que vous souhaitez.
+                    Votre annonce sera visible sur le marketplace et dans votre boutique.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-blue-400/40 bg-blue-500/5 p-4 flex items-start gap-3">
+                <span className="text-2xl leading-none mt-0.5">💡</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Annonce gratuite</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vous pouvez publier <strong>1 annonce gratuitement</strong> sans boutique. Pour publier plusieurs annonces,{" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/boutique")}
+                      className="text-blue-500 font-semibold underline underline-offset-2 hover:text-blue-400"
+                    >
+                      créez votre boutique
+                    </button>.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Submit */}
             <Button 
@@ -436,12 +467,12 @@ const AjouterAnnonce = () => {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Enregistrement...
+                  Publication en cours...
                 </>
               ) : (
                 <>
                   <span className="text-xl font-light leading-none mb-0.5">+</span>
-                  <span>Enregistrer & Choisir un pack</span>
+                  <span>Publier mon annonce</span>
                 </>
               )}
             </Button>

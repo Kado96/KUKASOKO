@@ -1,0 +1,9 @@
+﻿{
+  "model": "ollama/qwen3.5:4b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ]
+}

@@ -122,3 +122,7 @@ alembic revision --autogenerate -m "initial_migration"
 # 2. Appliquer les tables à votre base de données (SQLite ou Postgres)
 alembic upgrade head
 ```
+
+
+
+

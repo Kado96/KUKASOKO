@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KUKASOKO</string>
+    <string name="title_activity_main">KUKASOKO</string>
+    <string name="package_name">com.kukasoko.app</string>
+    <string name="custom_url_scheme">com.kukasoko.app</string>
+</resources>

@@ -429,30 +429,30 @@ const AjouterAnnonce = () => {
 
             {/* Bannière : info selon le rôle */}
             {isMerchant ? (
-              <div className="rounded-xl border border-[#febb2d]/40 bg-[#febb2d]/8 p-4 flex items-start gap-3">
+              <div key="banner-merchant" className="rounded-xl border border-[#febb2d]/40 bg-[#febb2d]/8 p-4 flex items-start gap-3">
                 <span className="text-2xl leading-none mt-0.5">🏪</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">Publication Boutique</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    En tant que marchand, vous pouvez publier autant d'annonces que vous souhaitez.
-                    Votre annonce sera visible sur le marketplace et dans votre boutique.
+                    <span>En tant que marchand, vous pouvez publier autant d’annonces que vous souhaitez. Votre annonce sera visible sur le marketplace et dans votre boutique.</span>
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-blue-400/40 bg-blue-500/5 p-4 flex items-start gap-3">
+              <div key="banner-client" className="rounded-xl border border-blue-400/40 bg-blue-500/5 p-4 flex items-start gap-3">
                 <span className="text-2xl leading-none mt-0.5">💡</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">Annonce gratuite</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Vous pouvez publier <strong>1 annonce gratuitement</strong> sans boutique. Pour publier plusieurs annonces,{" "}
+                    <span>Vous pouvez publier <strong>1 annonce gratuitement</strong> sans boutique. Pour publier plusieurs annonces, </span>
                     <button
                       type="button"
                       onClick={() => navigate("/boutique")}
                       className="text-blue-500 font-semibold underline underline-offset-2 hover:text-blue-400"
                     >
-                      créez votre boutique
-                    </button>.
+                      <span>créez votre boutique</span>
+                    </button>
+                    <span>.</span>
                   </p>
                 </div>
               </div>
@@ -467,7 +467,7 @@ const AjouterAnnonce = () => {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Publication en cours...
+                  <span>Publication en cours...</span>
                 </>
               ) : (
                 <>

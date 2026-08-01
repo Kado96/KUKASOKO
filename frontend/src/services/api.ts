@@ -87,6 +87,11 @@ export const listingsAPI = {
 
   delete: (id: number) => api.delete(`/api/listings/${id}`),
 
+  update: (id: number, data: object) => api.patch(`/api/listings/${id}`, data),
+
+  // Annonce invité (sans authentification)
+  createGuest: (data: object) => api.post("/api/listings/guest", data),
+
   getCategories: () => api.get("/api/listings/categories/all"),
 };
 
@@ -98,6 +103,7 @@ export const merchantsAPI = {
   getListings: (id: number) => api.get(`/api/merchants/${id}/listings`),
   create: (data: object) => api.post("/api/merchants/", data),
   updateMe: (data: object) => api.patch("/api/merchants/me", data),
+  deleteMe: () => api.delete("/api/merchants/me"),
   updateSubscription: (subscription_pack: string) => api.put("/api/merchants/subscription", { subscription_pack }),
 };
 

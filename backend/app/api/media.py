@@ -59,15 +59,41 @@ def _build_url(request_base: str, file_path: str) -> str:
     return f"{request_base}/{file_path}"
 
 
+# OAuth2 standard optionnel pour le téléversement (invités)
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from app.database import settings
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> Optional[models.User]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        sub: str = payload.get("sub")
+        if sub is None:
+            return None
+        user_id = int(sub)
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user and user.is_active:
+            return user
+    except (JWTError, ValueError):
+        pass
+    return None
+
 @router.post("/upload", response_model=MediaFileOut)
 async def upload_media(
     file: UploadFile = File(...),
     category: str = Query("library", description="listing | merchant | avatar | banner | library"),
     listing_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
 ):
-    """Upload un fichier vers le dossier media/ et l'enregistre en DB."""
+    """Upload un fichier vers le dossier media/ et l'enregistre en DB (accessible aux invités)."""
     # Vérification du type MIME
     content_type = file.content_type or "application/octet-stream"
     if content_type not in ALLOWED_TYPES:
@@ -116,7 +142,7 @@ async def upload_media(
         storage_provider="local",
         media_category=category,
         related_listing_id=listing_id,
-        uploaded_by=current_user.id,
+        uploaded_by=current_user.id if current_user else None,
     )
     db.add(media_record)
     db.commit()

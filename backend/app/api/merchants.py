@@ -98,3 +98,22 @@ def update_subscription(
     db.commit()
     db.refresh(profile)
     return profile
+
+
+@router.delete("/me", status_code=204)
+def delete_merchant_profile(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Supprimer sa boutique et repasser au rôle d'utilisateur standard."""
+    profile = db.query(models.MerchantProfile).filter(
+        models.MerchantProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profil marchand introuvable")
+
+    db.delete(profile)
+    # Rétablir le rôle standard
+    current_user.role = models.UserRole.user
+    db.commit()
+

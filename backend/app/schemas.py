@@ -83,6 +83,42 @@ class ListingCreate(BaseModel):
     image_urls: Optional[str] = None  # Comma-separated URLs from frontend upload
 
 
+class ListingGuestCreate(BaseModel):
+    """Annonce publiée par un visiteur non connecté.
+    Limitée à 1 annonce active par guest_token (UUID localStorage), valable 24h.
+    """
+    title: str
+    description: Optional[str] = None
+    price: float
+    currency: str = "BIF"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    city: str = "Bujumbura"
+    category_id: Optional[int] = None
+    image_urls: Optional[str] = None
+    # Champs obligatoires pour les invités
+    guest_token: str          # UUID généré côté client et stocké en localStorage
+    guest_name: str           # Nom du vendeur (affiché dans l'annonce)
+    guest_phone: str          # Téléphone de contact
+
+
+class ListingUpdate(BaseModel):
+    """Mise à jour partielle d'une annonce (PATCH).
+    Tous les champs sont optionnels.
+    """
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    currency: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    category_id: Optional[int] = None
+    image_urls: Optional[str] = None
+
+
 class ListingOut(BaseModel):
     id: int
     title: str
@@ -95,10 +131,13 @@ class ListingOut(BaseModel):
     address: Optional[str]
     city: str
     image_urls: Optional[str]
-    seller_id: int
+    seller_id: Optional[int] = None   # nullable pour les annonces invité
     category_id: Optional[int]
     views: int
     is_featured: bool
+    expires_at: Optional[datetime] = None
+    guest_name: Optional[str] = None
+    guest_phone: Optional[str] = None
     created_at: datetime
     seller: Optional[UserOut] = None
     category: Optional[CategoryOut] = None

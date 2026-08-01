@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os, uuid, shutil
+from datetime import datetime, timedelta, timezone
 from app.database import get_db, settings
 from app import models, schemas
 from app.auth import get_current_user
@@ -112,6 +113,95 @@ def get_listing(listing_id: int, db: Session = Depends(get_db)):
     return listing
 
 
+
+# ─── Annonce invité (sans compte) ────────────────────────────────────────────
+
+@router.post("/guest", response_model=schemas.ListingOut, status_code=201)
+def create_guest_listing(
+    listing_data: schemas.ListingGuestCreate,
+    db: Session = Depends(get_db),
+):
+    """Publier une annonce gratuite SANS être connecté.
+
+    Règles :
+    - 1 annonce active par guest_token (UUID généré côté client, stocké en localStorage).
+    - Annonce valable 24h puis archivée automatiquement.
+    - Le guest_token, guest_name et guest_phone sont stockés pour identifier le vendeur.
+    """
+    now = datetime.now(timezone.utc)
+
+    # Valider le guest_token (doit être un UUID v4 valide pour éviter les abus)
+    import re
+    uuid_pattern = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
+    if not uuid_pattern.match(listing_data.guest_token):
+        raise HTTPException(status_code=400, detail="guest_token invalide (UUID v4 requis).")
+
+    # Chercher les annonces actives de cet invité
+    active_listings = (
+        db.query(models.Listing)
+        .filter(
+            models.Listing.guest_token == listing_data.guest_token,
+            models.Listing.status == models.ListingStatus.active,
+        )
+        .all()
+    )
+
+    # Archiver automatiquement les annonces expirées
+    still_active = []
+    for l in active_listings:
+        # l.expires_at provenant de SQLite est offset-naive. Rendons-le offset-aware ou comparons-les en naive UTC.
+        exp = l.expires_at
+        if exp:
+            if exp.tzinfo is not None:
+                exp = exp.astimezone(timezone.utc).replace(tzinfo=None)
+            naive_now = now.replace(tzinfo=None)
+            if exp < naive_now:
+                l.status = models.ListingStatus.sold
+            else:
+                still_active.append(l)
+        else:
+            still_active.append(l)
+    if active_listings:
+        db.commit()
+
+    # Bloquer si une annonce active existe encore
+    if still_active:
+        naive_exp = still_active[0].expires_at
+        if naive_exp and naive_exp.tzinfo is not None:
+            naive_exp = naive_exp.astimezone(timezone.utc).replace(tzinfo=None)
+        
+        naive_now = now.replace(tzinfo=None)
+        remaining = naive_exp - naive_now if naive_exp else None
+        hours_left = int(remaining.total_seconds() // 3600) if remaining else 0
+        minutes_left = int((remaining.total_seconds() % 3600) // 60) if remaining else 0
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Vous avez déjà une annonce gratuite active (expire dans {hours_left}h{minutes_left:02d}min). "
+                "Créez un compte pour accéder à votre boutique et publier plusieurs annonces illimitées."
+            ),
+        )
+
+    # Créer l'annonce invité avec expiration 24h
+    expires_at = now + timedelta(hours=24)
+    data = listing_data.model_dump(exclude={"guest_token", "guest_name", "guest_phone"})
+    listing = models.Listing(
+        **data,
+        seller_id=None,
+        guest_token=listing_data.guest_token,
+        guest_name=listing_data.guest_name,
+        guest_phone=listing_data.guest_phone,
+        expires_at=expires_at,
+    )
+    db.add(listing)
+    db.commit()
+    db.refresh(listing)
+    return listing
+
+
 @router.post("/", response_model=schemas.ListingOut, status_code=201)
 def create_listing(
     listing_data: schemas.ListingCreate,
@@ -121,29 +211,61 @@ def create_listing(
     """Publier une nouvelle annonce.
     
     Règle métier :
-    - Client simple (role=user) : 1 annonce maximum.
-    - Marchand / Admin : annonces illimitées.
+    - Client simple (role=user) : 1 annonce gratuite valable 24h.
+      Si l'annonce précédente a expiré, elle est archivée et il peut en poster une nouvelle.
+    - Marchand / Admin : annonces illimitées, sans expiration.
     """
-    # ── Règle : client simple limité à 1 annonce ─────────────────────────────
+    now = datetime.now(timezone.utc)
+
     if current_user.role == models.UserRole.user:
-        existing_count = (
+        # Chercher les annonces actives non expirées de l'utilisateur
+        active_listings = (
             db.query(models.Listing)
             .filter(
                 models.Listing.seller_id == current_user.id,
-                models.Listing.status != models.ListingStatus.sold,
+                models.Listing.status == models.ListingStatus.active,
             )
-            .count()
+            .all()
         )
-        if existing_count >= 1:
+
+        # Archiver automatiquement les annonces expirées (expires_at < now)
+        still_active = []
+        for l in active_listings:
+            if l.expires_at and l.expires_at < now:
+                l.status = models.ListingStatus.sold  # archiver silencieusement
+            else:
+                still_active.append(l)
+        if active_listings:
+            db.commit()
+
+        # Bloquer si l'utilisateur a encore une annonce active non expirée
+        if still_active:
+            # Calculer le temps restant
+            remaining = still_active[0].expires_at - now if still_active[0].expires_at else None
+            hours_left = int(remaining.total_seconds() // 3600) if remaining else 0
+            minutes_left = int((remaining.total_seconds() % 3600) // 60) if remaining else 0
             raise HTTPException(
                 status_code=403,
                 detail=(
-                    "Les clients sans boutique ne peuvent publier qu'une seule annonce active. "
-                    "Créez votre boutique pour publier plusieurs annonces."
+                    f"Vous avez déjà une annonce gratuite active (expire dans {hours_left}h{minutes_left:02d}min). "
+                    "Créez votre boutique pour publier plusieurs annonces illimitées."
                 ),
             )
 
-    listing = models.Listing(**listing_data.model_dump(), seller_id=current_user.id)
+        # OK : créer l'annonce gratuite avec expiration 24h
+        expires_at = now + timedelta(hours=24)
+        listing = models.Listing(
+            **listing_data.model_dump(),
+            seller_id=current_user.id,
+            expires_at=expires_at,
+        )
+    else:
+        # Marchand / Admin : pas d'expiration
+        listing = models.Listing(
+            **listing_data.model_dump(),
+            seller_id=current_user.id,
+        )
+
     db.add(listing)
     db.commit()
     db.refresh(listing)
@@ -187,16 +309,78 @@ async def upload_listing_images(
     return {"image_urls": paths}
 
 
+@router.patch("/{listing_id}", response_model=schemas.ListingOut)
+def update_listing(
+    listing_id: int,
+    data: schemas.ListingUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Modifier une annonce.
+
+    Règles :
+    - Marchand / Admin : modification illimitée dans le temps.
+    - Client simple (role=user) : modification autorisée dans la 1ère heure
+      suivant la création de l'annonce seulement.
+    """
+    listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
+    if not listing or listing.seller_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Annonce introuvable ou accès refusé")
+
+    # Règle temporelle pour les clients sans boutique
+    if current_user.role == models.UserRole.user:
+        now = datetime.now(timezone.utc)
+        # created_at peut être naive ou aware selon le driver
+        created = listing.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        elapsed = now - created
+        if elapsed.total_seconds() > 3600:  # 1 heure = 3600 secondes
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "La modification n'est possible que dans la première heure suivant la publication. "
+                    "Créez une boutique pour des modifications illimitées."
+                ),
+            )
+
+    # Appliquer les modifications (champs non-None uniquement)
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(listing, field, value)
+    db.commit()
+    db.refresh(listing)
+    return listing
+
+
 @router.delete("/{listing_id}", status_code=204)
 def delete_listing(
     listing_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Supprimer une annonce."""
+    """Supprimer une annonce.
+
+    Règles :
+    - Marchand / Admin : suppression illimitée.
+    - Client simple : peut supprimer son annonce gratuite pendant les 24h
+      (tant que expires_at n'est pas dépassé ou si expires_at est NULL).
+    """
     listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
     if not listing or listing.seller_id != current_user.id:
         raise HTTPException(status_code=404, detail="Annonce introuvable ou accès refusé")
+
+    # Vérification pour clients sans boutique : suppression ok pendant 24h
+    if current_user.role == models.UserRole.user and listing.expires_at:
+        now = datetime.now(timezone.utc)
+        expires = listing.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if now > expires:
+            raise HTTPException(
+                status_code=403,
+                detail="Votre annonce gratuite de 24h a expiré. Elle a été archivée automatiquement.",
+            )
+
     db.delete(listing)
     db.commit()
 

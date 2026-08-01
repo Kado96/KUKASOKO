@@ -75,11 +75,21 @@ class Listing(Base):
     # Images (comma-separated paths)
     image_urls = Column(Text)
 
-    seller_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # seller_id est nullable : NULL pour les annonces d'invités (sans compte)
+    seller_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"))
+
+    # ── Annonce invité (sans compte) ─────────────────────────────────────────
+    # guest_token : UUID stocké dans le localStorage du navigateur (limite 1/24h)
+    guest_token = Column(String, nullable=True, index=True)
+    guest_name  = Column(String, nullable=True)   # Nom affiché du vendeur invité
+    guest_phone = Column(String, nullable=True)   # Téléphone de contact invité
 
     views = Column(Integer, default=0)
     is_featured = Column(Boolean, default=False)
+    # Pour les annonces gratuites (clients sans boutique OU invités) : expiration 24h
+    # NULL pour les marchands = annonce permanente
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

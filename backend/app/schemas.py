@@ -63,9 +63,36 @@ class CategoryOut(BaseModel):
     name_sw: Optional[str]
     icon: Optional[str]
     color: Optional[str]
+    parent_id: Optional[int] = None
 
     class Config:
         from_attributes = True
+
+
+class CategoryTreeOut(CategoryOut):
+    children: List["CategoryTreeOut"] = []
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    name_fr: Optional[str] = None
+    name_en: Optional[str] = None
+    name_rn: Optional[str] = None
+    name_sw: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    parent_id: Optional[int] = None
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    name_fr: Optional[str] = None
+    name_en: Optional[str] = None
+    name_rn: Optional[str] = None
+    name_sw: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 # ─── Listing ─────────────────────────────────────────────────────────────────
@@ -227,3 +254,6 @@ class DeliverySessionOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+CategoryTreeOut.model_rebuild()

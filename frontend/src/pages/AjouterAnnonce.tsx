@@ -126,7 +126,6 @@ const AjouterAnnonce = () => {
 
   // ── State du formulaire ───────────────────────────────────────────────────
   const [title, setTitle] = useState("");
-  const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
@@ -139,20 +138,33 @@ const AjouterAnnonce = () => {
   const [submitting, setSubmitting] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [categoriesList, setCategoriesList] = useState(defaultCategories);
+  const [categoryTree, setCategoryTree] = useState<
+    { id: number; name: string; children?: { id: number; name: string }[] }[]
+  >([]);
+  const [parentCategoryId, setParentCategoryId] = useState("");
+  const [subCategoryId, setSubCategoryId] = useState("");
   const [published, setPublished] = useState(false); // Écran succès
+
+  const selectedParent = categoryTree.find((c) => String(c.id) === parentCategoryId);
+  const subcats = selectedParent?.children ?? [];
+  const categoryId = subCategoryId || parentCategoryId;
 
   // ── Chargement des catégories ─────────────────────────────────────────────
   useEffect(() => {
     listingsAPI
-      .getCategories()
+      .getCategoriesTree()
       .then((res) => {
-        if (Array.isArray(res.data)) {
-          const apiCats = res.data.map((c: any) => ({
-            value: String(c.id),
-            label: c.name_fr || c.name || "Catégorie",
-          }));
-          setCategoriesList(apiCats);
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setCategoryTree(
+            res.data.map((c: any) => ({
+              id: c.id,
+              name: c.name_fr || c.name || "Catégorie",
+              children: (c.children || []).map((s: any) => ({
+                id: s.id,
+                name: s.name_fr || s.name || "Sous-catégorie",
+              })),
+            }))
+          );
         }
       })
       .catch(() => {});
@@ -227,10 +239,18 @@ const AjouterAnnonce = () => {
     e.preventDefault();
 
     // Validation commune
-    if (!title || !categoryId || !description) {
+    if (!title || !parentCategoryId || !description) {
       toast({
         title: "Champs requis",
         description: "Veuillez remplir le titre, la catégorie et la description.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (subcats.length > 0 && !subCategoryId) {
+      toast({
+        title: "Sous-catégorie requise",
+        description: "Veuillez choisir une sous-catégorie.",
         variant: "destructive",
       });
       return;
@@ -298,7 +318,7 @@ const AjouterAnnonce = () => {
         await listingsAPI.create(payload);
 
         // Reset et redirection
-        setTitle(""); setCategoryId(""); setDescription("");
+        setTitle(""); setParentCategoryId(""); setSubCategoryId(""); setDescription("");
         setPrice(""); setLocation(""); setImages([]);
 
         if (isMerchant) {
@@ -335,7 +355,7 @@ const AjouterAnnonce = () => {
 
   // ── Réinitialiser pour une nouvelle annonce ───────────────────────────────
   const resetForm = () => {
-    setTitle(""); setCategoryId(""); setDescription("");
+    setTitle(""); setParentCategoryId(""); setSubCategoryId(""); setDescription("");
     setPrice(""); setLocation(""); setImages([]);
     setGuestName(""); setGuestPhone("");
     setGpsCoords(null); setPublished(false);
@@ -453,14 +473,48 @@ const AjouterAnnonce = () => {
               <select
                 id="category"
                 name="category"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                value={parentCategoryId}
+                onChange={(e) => {
+                  setParentCategoryId(e.target.value);
+                  setSubCategoryId("");
+                }}
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Sélectionnez une catégorie</option>
-                {categoriesList.map((cat) => (
+                {(categoryTree.length > 0
+                  ? categoryTree.map((cat) => ({ value: String(cat.id), label: cat.name }))
+                  : defaultCategories
+                ).map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sous-catégorie */}
+            <div className="space-y-2">
+              <Label htmlFor="subcategory" className="text-foreground font-medium">
+                Sous-catégorie{subcats.length > 0 ? " *" : ""}
+              </Label>
+              <select
+                id="subcategory"
+                name="subcategory"
+                value={subCategoryId}
+                onChange={(e) => setSubCategoryId(e.target.value)}
+                disabled={!parentCategoryId || subcats.length === 0}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-70"
+              >
+                <option value="">
+                  {!parentCategoryId
+                    ? "Choisissez d'abord une catégorie"
+                    : subcats.length === 0
+                      ? "Aucune sous-catégorie"
+                      : "Sélectionnez une sous-catégorie"}
+                </option>
+                {subcats.map((sub) => (
+                  <option key={sub.id} value={String(sub.id)}>
+                    {sub.name}
                   </option>
                 ))}
               </select>

@@ -5,7 +5,8 @@ import {
   BarChart3, Users, ShoppingBag, Flag, MessageSquare, Store, Settings,
   Eye, Trash2, CheckCircle, XCircle, Search, Pencil, Save, X, Plus,
   ShieldCheck, ShieldOff, ImagePlus, Image as ImageIcon, UploadCloud,
-  Palette, RefreshCw, Loader2, Radio, DollarSign, ToggleLeft, ToggleRight
+  Palette, RefreshCw, Loader2, Radio, DollarSign, ToggleLeft, ToggleRight,
+  ChevronUp, ChevronDown, Tags
 } from "lucide-react";
 import { useNewsTicker } from "@/contexts/NewsTickerContext";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,17 @@ import { useNavigate } from "react-router-dom";
 import { usersAPI, mediaAPI, listingsAPI, API_BASE } from "@/services/api";
 import { Copy, FolderOpen, HardDrive, Database } from "lucide-react";
 
-type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau";
+type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau" | "categories";
+
+type CategoryItem = {
+  id: number;
+  name: string;
+  name_fr?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  parent_id?: number | null;
+  children?: CategoryItem[];
+};
 
 type User = { id: number; name: string; email: string; role: string; status: string; date: string; avatar?: string };
 type Boutique = { id: number; name: string; owner: string; annonces: number; status: string; date: string; logo?: string; cover?: string };
@@ -264,6 +275,100 @@ const Admin = () => {
     }
   }, [activeTab]);
 
+  /* catégories */
+  const [categoryTree, setCategoryTree] = useState<CategoryItem[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [catForm, setCatForm] = useState({ name: "", icon: "", parent_id: "" as string });
+  const [editCatId, setEditCatId] = useState<number | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatIcon, setEditCatIcon] = useState("");
+
+  const loadCategories = async () => {
+    setCategoriesLoading(true);
+    try {
+      const res = await listingsAPI.getCategoriesTree();
+      setCategoryTree(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger les catégories.", variant: "destructive" });
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "categories" && isAuthenticated && user?.role === "admin") {
+      loadCategories();
+    }
+  }, [activeTab]);
+
+  const handleCreateCategory = async () => {
+    const name = catForm.name.trim();
+    if (!name) {
+      toast({ title: "Nom requis", variant: "destructive" });
+      return;
+    }
+    try {
+      await listingsAPI.createCategory({
+        name,
+        name_fr: name,
+        icon: catForm.icon.trim() || undefined,
+        parent_id: catForm.parent_id ? Number(catForm.parent_id) : null,
+      });
+      setCatForm({ name: "", icon: "", parent_id: "" });
+      toast({ title: catForm.parent_id ? "Sous-catégorie créée" : "Catégorie créée" });
+      loadCategories();
+    } catch (err: any) {
+      toast({
+        title: "Erreur",
+        description: err?.response?.data?.detail || "Création impossible",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveCategory = async (id: number) => {
+    const name = editCatName.trim();
+    if (!name) {
+      toast({ title: "Nom requis", variant: "destructive" });
+      return;
+    }
+    try {
+      await listingsAPI.updateCategory(id, {
+        name,
+        name_fr: name,
+        icon: editCatIcon.trim() || null,
+      });
+      setEditCatId(null);
+      toast({ title: "Catégorie mise à jour" });
+      loadCategories();
+    } catch (err: any) {
+      toast({
+        title: "Erreur",
+        description: err?.response?.data?.detail || "Modification impossible",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCategory = (id: number, label: string) => {
+    setConfirm({
+      msg: `Supprimer « ${label} » ?`,
+      action: async () => {
+        try {
+          await listingsAPI.deleteCategory(id);
+          toast({ title: "Catégorie supprimée" });
+          loadCategories();
+        } catch (err: any) {
+          toast({
+            title: "Suppression refusée",
+            description: err?.response?.data?.detail || "Impossible de supprimer",
+            variant: "destructive",
+          });
+        }
+      },
+    });
+  };
+
 
   /* boutiques */
   const [boutiques, setBoutiques] = useState<Boutique[]>(initBoutiques);
@@ -360,6 +465,24 @@ const Admin = () => {
 
   /* site branding */
   const { settings: siteSettings, updateSettings: updateSiteSettings, resetSettings: resetSiteSettings } = useSite();
+
+  const heroSlides =
+    siteSettings.heroImages?.length > 0
+      ? siteSettings.heroImages
+      : siteSettings.heroImage
+        ? [siteSettings.heroImage]
+        : [];
+
+  const saveHeroSlides = (next: string[]) =>
+    updateSiteSettings({ heroImages: next, heroImage: next[0] || "" });
+
+  const moveHeroSlide = (from: number, to: number) => {
+    if (to < 0 || to >= heroSlides.length) return;
+    const next = [...heroSlides];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    saveHeroSlides(next);
+  };
 
   /* news ticker */
   const { messages: tickerMessages, addMessage: addTickerMsg, updateMessage: updateTickerMsg, deleteMessage: deleteTickerMsg, toggleMessage: toggleTickerMsg } = useNewsTicker();
@@ -513,6 +636,7 @@ const Admin = () => {
     { id: "dashboard", label: "Tableau de bord", icon: <BarChart3 className="w-4 h-4" /> },
     { id: "annonces", label: "Annonces", icon: <ShoppingBag className="w-4 h-4" /> },
     { id: "boutiques", label: "Boutiques", icon: <Store className="w-4 h-4" /> },
+    { id: "categories", label: "Catégories", icon: <Tags className="w-4 h-4" /> },
     { id: "utilisateurs", label: "Utilisateurs", icon: <Users className="w-4 h-4" /> },
     { id: "signalements", label: "Signalements", icon: <Flag className="w-4 h-4" /> },
     { id: "chatbot", label: "Chatbot IA", icon: <MessageSquare className="w-4 h-4" /> },
@@ -1348,6 +1472,177 @@ const Admin = () => {
 
 
               {/* ─── PERSONNALISATION ─── */}
+              {activeTab === "categories" && (
+                <div className="space-y-6">
+                  <div className="bg-card rounded-xl border border-border p-6 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-foreground">Ajouter une catégorie ou sous-catégorie</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Laissez « Parent » vide pour une catégorie principale.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <input
+                        type="text"
+                        placeholder="Nom *"
+                        value={catForm.name}
+                        onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+                        className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Icône (emoji)"
+                        value={catForm.icon}
+                        onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
+                        className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <select
+                        value={catForm.parent_id}
+                        onChange={(e) => setCatForm({ ...catForm, parent_id: e.target.value })}
+                        className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      >
+                        <option value="">Catégorie principale</option>
+                        {categoryTree.map((p) => (
+                          <option key={p.id} value={String(p.id)}>
+                            Sous-catégorie de : {p.name_fr || p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Button onClick={handleCreateCategory} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Plus className="w-4 h-4 mr-1" /> Ajouter
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-card rounded-xl border border-border overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                      <h3 className="font-semibold text-foreground">Arborescence</h3>
+                      <Button variant="outline" size="sm" onClick={loadCategories} disabled={categoriesLoading}>
+                        <RefreshCw className={`w-3.5 h-3.5 mr-1 ${categoriesLoading ? "animate-spin" : ""}`} />
+                        Actualiser
+                      </Button>
+                    </div>
+                    {categoriesLoading ? (
+                      <div className="p-10 flex justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : categoryTree.length === 0 ? (
+                      <p className="p-6 text-sm text-muted-foreground text-center">Aucune catégorie pour le moment.</p>
+                    ) : (
+                      <ul className="divide-y divide-border">
+                        {categoryTree.map((parent) => (
+                          <li key={parent.id} className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg w-7 text-center">{parent.icon || "📁"}</span>
+                              {editCatId === parent.id ? (
+                                <>
+                                  <input
+                                    value={editCatName}
+                                    onChange={(e) => setEditCatName(e.target.value)}
+                                    className="flex-1 h-9 px-3 rounded-lg border border-border bg-background text-sm"
+                                  />
+                                  <input
+                                    value={editCatIcon}
+                                    onChange={(e) => setEditCatIcon(e.target.value)}
+                                    placeholder="Icône"
+                                    className="w-20 h-9 px-2 rounded-lg border border-border bg-background text-sm"
+                                  />
+                                  <Button size="sm" onClick={() => handleSaveCategory(parent.id)}>
+                                    <Save className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => setEditCatId(null)}>
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="flex-1 font-medium text-foreground">{parent.name_fr || parent.name}</span>
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {(parent.children?.length || 0)} sous-cat.
+                                  </Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditCatId(parent.id);
+                                      setEditCatName(parent.name_fr || parent.name);
+                                      setEditCatIcon(parent.icon || "");
+                                    }}
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-500 hover:text-red-600"
+                                    onClick={() => handleDeleteCategory(parent.id, parent.name_fr || parent.name)}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                            {(parent.children?.length ?? 0) > 0 && (
+                              <ul className="mt-3 ml-8 space-y-2 border-l border-border pl-4">
+                                {parent.children!.map((child) => (
+                                  <li key={child.id} className="flex items-center gap-3">
+                                    <span className="text-base w-6 text-center">{child.icon || "•"}</span>
+                                    {editCatId === child.id ? (
+                                      <>
+                                        <input
+                                          value={editCatName}
+                                          onChange={(e) => setEditCatName(e.target.value)}
+                                          className="flex-1 h-8 px-3 rounded-lg border border-border bg-background text-sm"
+                                        />
+                                        <input
+                                          value={editCatIcon}
+                                          onChange={(e) => setEditCatIcon(e.target.value)}
+                                          placeholder="Icône"
+                                          className="w-20 h-8 px-2 rounded-lg border border-border bg-background text-sm"
+                                        />
+                                        <Button size="sm" onClick={() => handleSaveCategory(child.id)}>
+                                          <Save className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setEditCatId(null)}>
+                                          <X className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="flex-1 text-sm text-foreground">{child.name_fr || child.name}</span>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setEditCatId(child.id);
+                                            setEditCatName(child.name_fr || child.name);
+                                            setEditCatIcon(child.icon || "");
+                                          }}
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-red-500 hover:text-red-600"
+                                          onClick={() => handleDeleteCategory(child.id, child.name_fr || child.name)}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {activeTab === "personnalisation" && (
                 <div className="space-y-6">
                   {/* Identity & Theme */}
@@ -1460,18 +1755,75 @@ const Admin = () => {
                   <div className="bg-card rounded-xl border border-border p-6 space-y-6">
                     <div>
                       <h3 className="font-semibold text-foreground">Bannière d'accueil</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Modifiez la photo d'arrière-plan et les textes de présentation.</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Carrousel de photos mises en avant (accueil, réseaux sociaux, campagnes). Elles défilent derrière le titre et la recherche.
+                      </p>
                     </div>
 
-                    <ImageBox
-                      label="Image d'arrière-plan de la bannière"
-                      src={siteSettings.heroImage}
-                      onUpload={(url) => updateSiteSettings({ heroImage: url })}
-                      onDelete={() => ask("Réinitialiser l'image de la bannière ?", () => { updateSiteSettings({ heroImage: "" }); toast({ title: "Image réinitialisée" }); })}
-                      onPreview={setLightbox}
-                      coverRatio
-                      category="banner"
-                    />
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                        Images mises en avant (carrousel)
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Ajoutez les visuels que vous voulez mettre en avant partout (accueil + partage). Plusieurs images = carrousel automatique. Réordonnez avec les flèches.
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {heroSlides.map((src, idx) => (
+                          <div key={`${src}-${idx}`} className="space-y-1.5">
+                            <ImageBox
+                              label={`Slide ${idx + 1}`}
+                              src={src}
+                              onUpload={(url) => {
+                                const next = [...heroSlides];
+                                next[idx] = url;
+                                saveHeroSlides(next);
+                              }}
+                              onDelete={() =>
+                                ask("Retirer cette image du carrousel ?", () => {
+                                  saveHeroSlides(heroSlides.filter((_, i) => i !== idx));
+                                  toast({ title: "Image retirée du carrousel" });
+                                })
+                              }
+                              onPreview={setLightbox}
+                              coverRatio
+                              category="banner"
+                            />
+                            {heroSlides.length > 1 && (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => moveHeroSlide(idx, idx - 1)}
+                                  className="flex-1 h-7 rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+                                  title="Monter"
+                                  aria-label={`Monter le slide ${idx + 1}`}
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === heroSlides.length - 1}
+                                  onClick={() => moveHeroSlide(idx, idx + 1)}
+                                  className="flex-1 h-7 rounded-md border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+                                  title="Descendre"
+                                  aria-label={`Descendre le slide ${idx + 1}`}
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        <ImageBox
+                          label="Ajouter une image"
+                          src=""
+                          onUpload={(url) => saveHeroSlides([...heroSlides, url])}
+                          onDelete={() => {}}
+                          coverRatio
+                          category="banner"
+                        />
+                      </div>
+                    </div>
 
                     <div className="space-y-4">
                       <InlineField

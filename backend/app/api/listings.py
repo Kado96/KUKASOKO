@@ -5,9 +5,21 @@ import os, uuid, shutil
 from datetime import datetime, timedelta, timezone
 from app.database import get_db, settings
 from app import models, schemas
-from app.auth import get_current_user
+from app.auth import get_current_user, get_current_admin
 
 router = APIRouter()
+
+
+def _category_filter_ids(db: Session, category_id: int) -> List[int]:
+    """Inclut la catégorie et ses sous-catégories pour le filtrage d'annonces."""
+    ids = [category_id]
+    children = (
+        db.query(models.Category.id)
+        .filter(models.Category.parent_id == category_id)
+        .all()
+    )
+    ids.extend(c.id for c in children)
+    return ids
 
 
 import httpx
@@ -67,7 +79,9 @@ def get_listings(
     """Récupérer les annonces avec filtres optionnels."""
     query = db.query(models.Listing).filter(models.Listing.status == models.ListingStatus.active)
     if category_id:
-        query = query.filter(models.Listing.category_id == category_id)
+        query = query.filter(
+            models.Listing.category_id.in_(_category_filter_ids(db, category_id))
+        )
     if city:
         query = query.filter(models.Listing.city.ilike(f"%{city}%"))
     if min_price is not None:
@@ -97,7 +111,9 @@ def get_listings_for_map(
         )
     )
     if category_id:
-        query = query.filter(models.Listing.category_id == category_id)
+        query = query.filter(
+            models.Listing.category_id.in_(_category_filter_ids(db, category_id))
+        )
     return query.all()
 
 
@@ -387,5 +403,152 @@ def delete_listing(
 
 @router.get("/categories/all", response_model=List[schemas.CategoryOut])
 def get_categories(db: Session = Depends(get_db)):
-    """Toutes les catégories disponibles."""
-    return db.query(models.Category).all()
+    """Toutes les catégories disponibles (liste plate)."""
+    return db.query(models.Category).order_by(models.Category.name).all()
+
+
+@router.get("/categories/tree", response_model=List[schemas.CategoryTreeOut])
+def get_categories_tree(db: Session = Depends(get_db)):
+    """Arborescence catégories → sous-catégories."""
+    parents = (
+        db.query(models.Category)
+        .filter(models.Category.parent_id.is_(None))
+        .order_by(models.Category.name)
+        .all()
+    )
+    result: List[schemas.CategoryTreeOut] = []
+    for p in parents:
+        children = sorted(p.children or [], key=lambda c: c.name or "")
+        result.append(
+            schemas.CategoryTreeOut(
+                id=p.id,
+                name=p.name,
+                name_fr=p.name_fr,
+                name_en=p.name_en,
+                name_rn=p.name_rn,
+                name_sw=p.name_sw,
+                icon=p.icon,
+                color=p.color,
+                parent_id=p.parent_id,
+                children=[
+                    schemas.CategoryTreeOut(
+                        id=c.id,
+                        name=c.name,
+                        name_fr=c.name_fr,
+                        name_en=c.name_en,
+                        name_rn=c.name_rn,
+                        name_sw=c.name_sw,
+                        icon=c.icon,
+                        color=c.color,
+                        parent_id=c.parent_id,
+                        children=[],
+                    )
+                    for c in children
+                ],
+            )
+        )
+    return result
+
+
+@router.post("/categories", response_model=schemas.CategoryOut, status_code=201)
+def create_category(
+    data: schemas.CategoryCreate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(get_current_admin),
+):
+    """(Admin) Créer une catégorie ou sous-catégorie."""
+    if data.parent_id is not None:
+        parent = db.query(models.Category).filter(models.Category.id == data.parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Catégorie parente introuvable")
+        if parent.parent_id is not None:
+            raise HTTPException(status_code=400, detail="Une sous-catégorie ne peut pas avoir d'enfants")
+
+    existing = db.query(models.Category).filter(models.Category.name == data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Une catégorie avec ce nom existe déjà")
+
+    cat = models.Category(
+        name=data.name,
+        name_fr=data.name_fr or data.name,
+        name_en=data.name_en,
+        name_rn=data.name_rn,
+        name_sw=data.name_sw,
+        icon=data.icon,
+        color=data.color,
+        parent_id=data.parent_id,
+    )
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.patch("/categories/{category_id}", response_model=schemas.CategoryOut)
+def update_category(
+    category_id: int,
+    data: schemas.CategoryUpdate,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(get_current_admin),
+):
+    """(Admin) Modifier une catégorie."""
+    cat = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    payload = data.model_dump(exclude_unset=True)
+    if "name" in payload and payload["name"]:
+        clash = (
+            db.query(models.Category)
+            .filter(models.Category.name == payload["name"], models.Category.id != category_id)
+            .first()
+        )
+        if clash:
+            raise HTTPException(status_code=400, detail="Une catégorie avec ce nom existe déjà")
+
+    if "parent_id" in payload and payload["parent_id"] is not None:
+        if payload["parent_id"] == category_id:
+            raise HTTPException(status_code=400, detail="Une catégorie ne peut pas être son propre parent")
+        parent = db.query(models.Category).filter(models.Category.id == payload["parent_id"]).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Catégorie parente introuvable")
+        if parent.parent_id is not None:
+            raise HTTPException(status_code=400, detail="Une sous-catégorie ne peut pas avoir d'enfants")
+        if cat.children:
+            raise HTTPException(status_code=400, detail="Impossible de déplacer une catégorie qui a des sous-catégories")
+
+    for key, value in payload.items():
+        setattr(cat, key, value)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.delete("/categories/{category_id}", status_code=204)
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(get_current_admin),
+):
+    """(Admin) Supprimer une catégorie (et ses sous-catégories)."""
+    cat = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    ids = [cat.id] + [c.id for c in (cat.children or [])]
+    used = (
+        db.query(models.Listing)
+        .filter(models.Listing.category_id.in_(ids))
+        .first()
+    )
+    if used:
+        raise HTTPException(
+            status_code=400,
+            detail="Des annonces utilisent cette catégorie. Réassignez-les avant de supprimer.",
+        )
+
+    for child in list(cat.children or []):
+        db.delete(child)
+    db.delete(cat)
+    db.commit()
+    return None

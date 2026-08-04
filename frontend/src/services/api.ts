@@ -93,6 +93,26 @@ export const listingsAPI = {
   createGuest: (data: object) => api.post("/api/listings/guest", data),
 
   getCategories: () => api.get("/api/listings/categories/all"),
+  getCategoriesTree: () => api.get("/api/listings/categories/tree"),
+  createCategory: (data: {
+    name: string;
+    name_fr?: string;
+    name_en?: string;
+    icon?: string;
+    color?: string;
+    parent_id?: number | null;
+  }) => api.post("/api/listings/categories", data),
+  updateCategory: (
+    id: number,
+    data: {
+      name?: string;
+      name_fr?: string | null;
+      icon?: string | null;
+      color?: string | null;
+      parent_id?: number | null;
+    }
+  ) => api.patch(`/api/listings/categories/${id}`, data),
+  deleteCategory: (id: number) => api.delete(`/api/listings/categories/${id}`),
 };
 
 // ─── Merchants ───────────────────────────────────────────────────────────────

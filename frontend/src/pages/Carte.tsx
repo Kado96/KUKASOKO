@@ -40,8 +40,11 @@ export default function Carte() {
   const destinationMarkerRef = useRef<L.Marker | null>(null);
 
   const { location, loading: locLoading, requestLocation } = useUserLocation();
-  const [categories, setCategories] = useState<{ id: number; name: string; icon?: string }[]>([]);
+  const [categoryTree, setCategoryTree] = useState<
+    { id: number; name: string; name_fr?: string; icon?: string; children?: { id: number; name: string; name_fr?: string }[] }[]
+  >([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [listings, setListings] = useState<any[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
@@ -59,39 +62,58 @@ export default function Carte() {
   const [routeTarget, setRouteTarget] = useState<{ lat: number; lng: number; title: string } | null>(null);
 
   const defaultCategories = [
-    { id: 1, name: "Immobilier", icon: "🏢" },
-    { id: 2, name: "À vendre", icon: "🛍️" },
-    { id: 3, name: "Services", icon: "🛠️" }
+    { id: 1, name: "Immobilier", icon: "🏢", children: [] },
+    { id: 2, name: "À vendre", icon: "🛍️", children: [] },
+    { id: 3, name: "Services", icon: "🛠️", children: [] },
   ];
+
+  const selectedParent = categoryTree.find((c) => c.id === selectedCategory);
+  const subcats = selectedParent?.children ?? [];
+  const activeCategoryId = selectedSubCategory ?? selectedCategory;
 
   // Fetch categories once (with mock fallback)
   useEffect(() => {
-    listingsAPI.getCategories()
+    listingsAPI.getCategoriesTree()
       .then((res) => {
         if (res.data && res.data.length > 0) {
-          setCategories(res.data);
+          setCategoryTree(
+            res.data.map((c: any) => ({
+              id: c.id,
+              name: c.name_fr || c.name,
+              name_fr: c.name_fr,
+              icon: c.icon,
+              children: (c.children || []).map((s: any) => ({
+                id: s.id,
+                name: s.name_fr || s.name,
+                name_fr: s.name_fr,
+              })),
+            }))
+          );
         } else {
-          setCategories(defaultCategories);
+          setCategoryTree(defaultCategories);
         }
       })
       .catch(() => {
-        setCategories(defaultCategories);
+        setCategoryTree(defaultCategories);
       });
   }, []);
 
-  // Fetch map listings whenever category changes (with mock fallback if empty)
+  // Fetch map listings whenever category / subcategory changes (with mock fallback if empty)
   useEffect(() => {
     setListingsLoading(true);
     listingsAPI
-      .getForMap(selectedCategory ?? undefined)
+      .getForMap(activeCategoryId ?? undefined)
       .then((res) => {
         if (res.data && res.data.length > 0) {
           setListings(res.data);
         } else {
           // Fallback to mock data with coordinates mapped
-          const activeCategoryName = categories.find(c => c.id === selectedCategory)?.name || "";
+          const activeCategoryName =
+            subcats.find((c) => c.id === selectedSubCategory)?.name ||
+            categoryTree.find((c) => c.id === selectedCategory)?.name ||
+            "";
           const mock = allListings
-            .filter((l) => selectedCategory === null || l.category.toLowerCase() === activeCategoryName.toLowerCase())
+            .filter((l) => activeCategoryId === null || l.category.toLowerCase() === activeCategoryName.toLowerCase())
             .map((l) => ({
               ...l,
               latitude: l.location?.lat,
@@ -111,7 +133,7 @@ export default function Carte() {
         setListings(mock);
       })
       .finally(() => setListingsLoading(false));
-  }, [selectedCategory]);
+  }, [activeCategoryId]);
 
   // Init map once with popup autoplay cycle
   useEffect(() => {
@@ -672,13 +694,39 @@ export default function Carte() {
               id="carte-category"
               name="carte-category"
               value={selectedCategory ?? "all"}
-              onChange={(e) => setSelectedCategory(e.target.value === "all" ? null : Number(e.target.value))}
-              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[200px]"
+              onChange={(e) => {
+                setSelectedCategory(e.target.value === "all" ? null : Number(e.target.value));
+                setSelectedSubCategory(null);
+              }}
+              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[180px]"
             >
               <option value="all">Toutes les catégories</option>
-              {Array.isArray(categories) && categories.map((cat) => (
+              {categoryTree.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
+                </option>
+              ))}
+            </select>
+            <select
+              id="carte-subcategory"
+              name="carte-subcategory"
+              value={selectedSubCategory ?? "all"}
+              onChange={(e) =>
+                setSelectedSubCategory(e.target.value === "all" ? null : Number(e.target.value))
+              }
+              disabled={subcats.length === 0}
+              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[180px] disabled:opacity-70 disabled:text-muted-foreground"
+            >
+              <option value="all">
+                {!selectedCategory
+                  ? "Sous-catégorie"
+                  : subcats.length === 0
+                    ? "Aucune sous-catégorie"
+                    : "Toutes les sous-catégories"}
+              </option>
+              {subcats.map((sub) => (
+                <option key={sub.id} value={sub.id}>
+                  {sub.name}
                 </option>
               ))}
             </select>

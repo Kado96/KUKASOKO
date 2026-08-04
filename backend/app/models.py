@@ -52,7 +52,10 @@ class Category(Base):
     name_sw = Column(String)  # Swahili
     icon = Column(String)
     color = Column(String)
+    parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True, index=True)
 
+    parent = relationship("Category", remote_side=[id], back_populates="children")
+    children = relationship("Category", back_populates="parent")
     listings = relationship("Listing", back_populates="category")
 
 

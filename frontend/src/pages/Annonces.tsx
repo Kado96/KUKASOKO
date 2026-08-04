@@ -9,23 +9,28 @@ import ShareModal from "@/components/ShareModal";
 
 import { listingsAPI, API_BASE } from "@/services/api";
 
+type CatNode = {
+  id: number;
+  name: string;
+  name_fr?: string | null;
+  parent_id?: number | null;
+  children?: CatNode[];
+};
+
 const Annonces = () => {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [filterCat, setFilterCat] = useState(searchParams.get("category") || "all");
+  const [filterCat, setFilterCat] = useState("all");
+  const [filterSubCat, setFilterSubCat] = useState("all");
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Charger les catégories de l'API pour mapper les IDs vers leurs noms
-  const [categories, setCategories] = useState<any[]>([]);
+  const [tree, setTree] = useState<CatNode[]>([]);
 
   useEffect(() => {
-    // Charger les catégories pour connaître les noms
-    listingsAPI.getCategories()
+    listingsAPI
+      .getCategoriesTree()
       .then((res) => {
-        if (Array.isArray(res.data)) {
-          setCategories(res.data);
-        }
+        if (Array.isArray(res.data)) setTree(res.data);
       })
       .catch(() => {});
 
@@ -60,6 +65,7 @@ const Annonces = () => {
             })(),
             category: l.category?.name_fr || l.category?.name || "À vendre",
             categoryId: String(l.category_id),
+            parentCategoryId: l.category?.parent_id ? String(l.category.parent_id) : null,
             rating: 5.0,
             reviews: 0,
             date: new Date(l.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
@@ -72,7 +78,8 @@ const Annonces = () => {
           const formattedMocks = allListings.map((m: any) => ({
             ...m,
             uniqueKey: `mock-${m.id}`,
-            categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4"
+            categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4",
+            parentCategoryId: null,
           }));
           setListings([...apiListings, ...formattedMocks]);
         }
@@ -83,7 +90,8 @@ const Annonces = () => {
         const formattedMocks = allListings.map((m: any) => ({
           ...m,
           uniqueKey: `mock-${m.id}`,
-          categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4"
+          categoryId: m.category === "Immobilier" ? "1" : m.category === "Véhicules" ? "2" : m.category === "Services" ? "3" : "4",
+          parentCategoryId: null,
         }));
         setListings(formattedMocks);
       })
@@ -94,13 +102,50 @@ const Annonces = () => {
 
   useEffect(() => {
     const cat = searchParams.get("category");
-    if (cat) setFilterCat(cat);
-  }, [searchParams]);
+    if (!cat || tree.length === 0) {
+      if (cat) setFilterCat(cat);
+      return;
+    }
+    const asParent = tree.find((c) => String(c.id) === cat);
+    if (asParent) {
+      setFilterCat(cat);
+      setFilterSubCat("all");
+      return;
+    }
+    for (const parent of tree) {
+      const child = parent.children?.find((c) => String(c.id) === cat);
+      if (child) {
+        setFilterCat(String(parent.id));
+        setFilterSubCat(cat);
+        return;
+      }
+    }
+    setFilterCat(cat);
+  }, [searchParams, tree]);
+
+  const selectedParent = tree.find((c) => String(c.id) === filterCat);
+  const subcats = selectedParent?.children ?? [];
+
+  const activeCatId = filterSubCat !== "all" ? filterSubCat : filterCat;
+  const childIds =
+    filterSubCat === "all" && selectedParent
+      ? new Set([String(selectedParent.id), ...(selectedParent.children || []).map((c) => String(c.id))])
+      : null;
 
   const filtered = listings.filter((l) => {
     const matchSearch = l.title.toLowerCase().includes(search.toLowerCase()) || 
                         l.description?.toLowerCase().includes(search.toLowerCase());
-    const matchCat = filterCat === "all" || String(l.categoryId) === filterCat || l.category === filterCat;
+    let matchCat = true;
+    if (activeCatId !== "all") {
+      if (childIds) {
+        matchCat =
+          childIds.has(String(l.categoryId)) ||
+          l.category === selectedParent?.name_fr ||
+          l.category === selectedParent?.name;
+      } else {
+        matchCat = String(l.categoryId) === activeCatId || l.category === activeCatId;
+      }
+    }
     return matchSearch && matchCat;
   });
 
@@ -136,12 +181,15 @@ const Annonces = () => {
               id="annonces-category"
               name="annonces-category"
               value={filterCat}
-              onChange={(e) => setFilterCat(e.target.value)}
+              onChange={(e) => {
+                setFilterCat(e.target.value);
+                setFilterSubCat("all");
+              }}
               className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">Toutes les catégories</option>
-              {categories.length > 0 ? (
-                categories.map((cat: any) => (
+              {tree.length > 0 ? (
+                tree.map((cat) => (
                   <option key={cat.id} value={String(cat.id)}>
                     {cat.name_fr || cat.name}
                   </option>
@@ -153,6 +201,27 @@ const Annonces = () => {
                   <option value="À vendre">À vendre</option>
                 </>
               )}
+            </select>
+            <select
+              id="annonces-subcategory"
+              name="annonces-subcategory"
+              value={filterSubCat}
+              onChange={(e) => setFilterSubCat(e.target.value)}
+              disabled={subcats.length === 0}
+              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-70 disabled:text-muted-foreground"
+            >
+              <option value="all">
+                {filterCat === "all"
+                  ? "Sous-catégorie"
+                  : subcats.length === 0
+                    ? "Aucune sous-catégorie"
+                    : "Toutes les sous-catégories"}
+              </option>
+              {subcats.map((sub) => (
+                <option key={sub.id} value={String(sub.id)}>
+                  {sub.name_fr || sub.name}
+                </option>
+              ))}
             </select>
           </div>
 

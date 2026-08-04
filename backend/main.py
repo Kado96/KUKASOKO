@@ -9,9 +9,25 @@ import os
 from app.database import engine, Base
 from app.api import auth, users, listings, messages, merchants, map_routes, reviews, media
 from app.websocket import router as ws_router
+from sqlalchemy import text, inspect
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
+
+# Ensure parent_id exists on categories (SQLite create_all won't alter existing tables)
+def _ensure_category_parent_id():
+    try:
+        insp = inspect(engine)
+        if "categories" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("categories")}
+        if "parent_id" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE categories ADD COLUMN parent_id INTEGER REFERENCES categories(id)"))
+    except Exception:
+        pass
+
+_ensure_category_parent_id()
 
 app = FastAPI(
     title="Isoko API",

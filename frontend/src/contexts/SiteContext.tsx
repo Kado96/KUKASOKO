@@ -7,7 +7,10 @@ export interface SiteSettings {
   footerPhone: string;
   heroTitle: string;
   heroSubtitle: string;
+  /** @deprecated Prefer heroImages — kept for migration from older saved settings */
   heroImage: string;
+  /** Images mises en avant dans le carrousel de la bannière d'accueil */
+  heroImages: string[];
   // Theme Colors (HSL components)
   primaryColor: string;      // --primary
   primaryFgColor: string;    // --primary-foreground
@@ -35,6 +38,7 @@ const defaultSettings: SiteSettings = {
   heroTitle: "Trouvez tout ce dont vous avez besoin au Burundi.",
   heroSubtitle: "Recherchez des propriétés, des services et des articles à vendre en un clic",
   heroImage: "",
+  heroImages: [],
   // Default values matching index.css :root
   primaryColor: "225 30% 18%",
   primaryFgColor: "45 100% 96%",
@@ -113,7 +117,20 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [settings, setSettings] = useState<SiteSettings>(() => {
     const saved = localStorage.getItem("isoko_site_settings");
     if (saved) {
-      try { return { ...defaultSettings, ...JSON.parse(saved) }; } catch { return defaultSettings; }
+      try {
+        const parsed = JSON.parse(saved) as Partial<SiteSettings>;
+        const merged = { ...defaultSettings, ...parsed };
+        // Migrate legacy single heroImage → heroImages carousel
+        if ((!merged.heroImages || merged.heroImages.length === 0) && merged.heroImage) {
+          merged.heroImages = [merged.heroImage];
+        }
+        if (!Array.isArray(merged.heroImages)) {
+          merged.heroImages = [];
+        }
+        return merged;
+      } catch {
+        return defaultSettings;
+      }
     }
     return defaultSettings;
   });

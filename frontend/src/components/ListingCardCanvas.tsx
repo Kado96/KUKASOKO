@@ -111,8 +111,21 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
     const src = data.image || "";
     img.src = src.startsWith("http") ? (src.includes("?") ? `${src}&nc=1` : `${src}?nc=1`) : src;
 
+    // Chargement du vrai logo KUKASOKO depuis /public/logo.jpg
+    const logoImg = new Image();
+    logoImg.crossOrigin = "anonymous";
+    logoImg.src = `${window.location.origin}/logo.jpg`;
+
     const DARK_BG = "#0b0b10";
     const PAD = Math.round(52 * S);
+
+    let imgReady = false;
+    let logoReady = false;
+
+    const tryDraw = () => {
+      if (!imgReady || !logoReady) return;
+      draw();
+    };
 
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
@@ -159,7 +172,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
         drawTextPanel(ctx, textX, 0, textW, H, S, PAD, data, accentColor, customText);
 
         // Badge logo sur la photo
-        drawTopBadge(ctx, Math.round(44 * S), Math.round(44 * S), S, accentColor, data.category);
+        drawTopBadge(ctx, Math.round(44 * S), Math.round(44 * S), S, accentColor, data.category, logoImg);
 
       } else {
         // ═══════════════════════════════════════════
@@ -194,7 +207,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
         drawTextPanel(ctx, 0, textY, W, textH, S, PAD, data, accentColor, customText);
 
         // Badge logo sur la photo
-        drawTopBadge(ctx, PAD, Math.round(44 * S), S, accentColor, data.category);
+        drawTopBadge(ctx, PAD, Math.round(44 * S), S, accentColor, data.category, logoImg);
       }
 
       // Callback PNG HD
@@ -203,9 +216,15 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
       }
     };
 
-    img.onload = draw;
-    img.onerror = draw;
-    if (img.complete) draw();
+    img.onload = () => { imgReady = true; tryDraw(); };
+    img.onerror = () => { imgReady = true; tryDraw(); };
+    logoImg.onload = () => { logoReady = true; tryDraw(); };
+    logoImg.onerror = () => { logoReady = true; tryDraw(); };
+
+    // Si les deux sont déjà en cache
+    if (img.complete) imgReady = true;
+    if (logoImg.complete) logoReady = true;
+    if (imgReady && logoReady) draw();
 
   }, [data, width, height, accentColor, customText]);
 
@@ -228,36 +247,58 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
 function drawTopBadge(
   ctx: CanvasRenderingContext2D,
   x: number, y: number,
-  S: number, accentColor: string, category: string
+  S: number, accentColor: string, category: string,
+  logoImg?: HTMLImageElement
 ) {
-  const logoR = Math.round(28 * S);
-  // Cercle K
-  ctx.beginPath();
-  ctx.arc(x + logoR, y + logoR, logoR, 0, Math.PI * 2);
-  ctx.fillStyle = accentColor;
-  ctx.fill();
-  ctx.font = `bold ${Math.round(26 * S)}px Inter, system-ui, sans-serif`;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("K", x + logoR, y + logoR + 1);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
+  const logoSize = Math.round(64 * S); // taille du logo carré arrondi
+  const logoRadius = Math.round(14 * S);
 
-  // Pill catégorie
-  const pillH = Math.round(38 * S);
-  const pillX = x + logoR * 2 + Math.round(12 * S);
-  const pillY = y + logoR - pillH / 2;
-  ctx.font = `700 ${Math.round(17 * S)}px Inter, system-ui, sans-serif`;
-  const pillW = ctx.measureText(category).width + Math.round(28 * S);
+  // Dessiner le logo KUKASOKO en carré arrondi avec clip
+  ctx.save();
+  rr(ctx, x, y, logoSize, logoSize, logoRadius);
+
+  if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+    // Clip et dessin du vrai logo
+    ctx.clip();
+    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+  } else {
+    // Fallback : carré accent + lettre K
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+    ctx.clip();
+    ctx.font = `bold ${Math.round(32 * S)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("K", x + logoSize / 2, y + logoSize / 2 + 1);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+  }
+  ctx.restore();
+
+  // Contour blanc autour du logo
+  ctx.save();
+  rr(ctx, x, y, logoSize, logoSize, logoRadius);
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = Math.max(2, Math.round(3 * S));
+  ctx.stroke();
+  ctx.restore();
+
+  // Pill catégorie (à droite du logo)
+  const pillH = Math.round(40 * S);
+  const pillX = x + logoSize + Math.round(14 * S);
+  const pillY = y + (logoSize - pillH) / 2;
+  ctx.font = `700 ${Math.round(18 * S)}px Inter, system-ui, sans-serif`;
+  const pillW = ctx.measureText(category).width + Math.round(30 * S);
   rr(ctx, pillX, pillY, pillW, pillH, pillH / 2);
   ctx.fillStyle = accentColor;
   ctx.fill();
   ctx.fillStyle = "#fff";
   ctx.textBaseline = "middle";
-  ctx.fillText(category, pillX + Math.round(14 * S), pillY + pillH / 2);
+  ctx.fillText(category, pillX + Math.round(15 * S), pillY + pillH / 2);
   ctx.textBaseline = "top";
 }
+
 
 // ── Panel texte professionnel ─────────────────────────────────────────────────
 function drawTextPanel(

@@ -91,7 +91,7 @@ const Navbar = () => {
             </Link>
           )}
           <Link to="/ajouter-annonce">
-            <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md">
               <Plus className="w-4 h-4 mr-2" />
               Ajouter une annonce
             </Button>
@@ -153,7 +153,7 @@ const Navbar = () => {
               </Link>
             )}
             <Link to="/ajouter-annonce" onClick={() => setMobileOpen(false)}>
-              <Button size="sm" className="w-full bg-accent text-accent-foreground">
+              <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                 <Plus className="w-4 h-4 mr-2" /> Ajouter une annonce
               </Button>
             </Link>

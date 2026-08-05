@@ -12,6 +12,7 @@ const navLinks = [
   { to: "/carte", label: "🗺️ Carte" },
   { to: "/messages", label: "Messages" },
   { to: "/boutique", label: "Boutique" },
+  { to: "/blog", label: "Blog" },
 ];
 
 const Navbar = () => {
@@ -124,7 +125,7 @@ const Navbar = () => {
           ))}
           <div className="pt-3 space-y-2 border-t border-primary-foreground/10">
             <Link to="/ma-boutique" onClick={() => setMobileOpen(false)}>
-              <Button variant="outline" size="sm" className="w-full border-primary-foreground/20 text-primary-foreground">
+              <Button size="sm" className="w-full bg-[#febb2d] hover:bg-[#febb2d]/90 text-black font-semibold border-0">
                 <Store className="w-4 h-4 mr-2" /> Ma Boutique
               </Button>
             </Link>

@@ -25,44 +25,81 @@ import Chatbot from "./components/Chatbot";
 import NewsTicker from "./components/NewsTicker";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { SplashScreen } from "./components/SplashScreen";
+import React from "react";
 
 const queryClient = new QueryClient();
 
+// ─── ErrorBoundary global ─────────────────────────────────────────────────────
+// Capture les erreurs de reconciliation DOM (ex: conflit Portal + extensions navigateur)
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    // Ignorer silencieusement les erreurs DOM causées par des extensions navigateur
+    if (error.message?.includes("removeChild") || error.message?.includes("is not a child")) {
+      this.setState({ hasError: false });
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 32, textAlign: "center" }}>
+          <h2 style={{ marginBottom: 12 }}>Une erreur est survenue</h2>
+          <button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}>
+            Recharger la page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <SplashScreen />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <SiteProvider>
-          <NewsTickerProvider>
-            <AuthProvider>
-              <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/annonces" element={<Annonces />} />
-              <Route path="/annonces/:id" element={<AnnonceDetail />} />
-              <Route path="/carte" element={<Carte />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/boutique" element={<Boutique />} />
-              <Route path="/ma-boutique" element={<MaBoutique />} />
-              <Route path="/marchand/:id" element={<Marchand />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:id" element={<BlogDetail />} />
-              <Route path="/ajouter-annonce" element={<AjouterAnnonce />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Chatbot />
-            <NewsTicker />
-            </AuthProvider>
-          </NewsTickerProvider>
-        </SiteProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <SplashScreen />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <SiteProvider>
+            <NewsTickerProvider>
+              <AuthProvider>
+                <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/annonces" element={<Annonces />} />
+                <Route path="/annonces/:id" element={<AnnonceDetail />} />
+                <Route path="/carte" element={<Carte />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/boutique" element={<Boutique />} />
+                <Route path="/ma-boutique" element={<MaBoutique />} />
+                <Route path="/marchand/:id" element={<Marchand />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetail />} />
+                <Route path="/ajouter-annonce" element={<AjouterAnnonce />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Chatbot />
+              <NewsTicker />
+              </AuthProvider>
+            </NewsTickerProvider>
+          </SiteProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

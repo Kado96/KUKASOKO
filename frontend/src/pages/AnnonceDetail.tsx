@@ -216,14 +216,6 @@ const AnnonceDetail = () => {
                   <button onClick={() => setActiveTab("avis")} className={`pb-2 border-b-2 font-medium text-sm transition-colors ${activeTab === "avis" ? "border-accent text-accent text-accent font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"}`}>Avis</button>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <ShareModal
-                    title={listing.title}
-                    description={listing.description}
-                    image={listing.image}
-                    price={listing.price}
-                    variant="outline"
-                    size="sm"
-                  />
                   <Button
                     onClick={() => setShowStudioModal(true)}
                     size="sm"
@@ -455,14 +447,7 @@ const AnnonceDetail = () => {
                   >
                     <MessageSquare className="w-4 h-4" /> Discuter avec le vendeur
                   </Button>
-                  <ShareModal
-                    title={listing.title}
-                    description={listing.description}
-                    image={listing.image}
-                    price={listing.price}
-                    variant="outline"
-                    className="w-full font-semibold border-border"
-                  />
+
                   <Button
                     onClick={() => setShowStudioModal(true)}
                     className="w-full bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-white font-bold gap-2 text-xs shadow-md"

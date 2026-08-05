@@ -5,13 +5,30 @@ import { Clock, ChevronLeft, ChevronRight, Share2, MessageCircle, Tag } from "lu
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { blogPosts } from "@/data/blogPosts";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
+import { TemplateStudioModal } from "@/components/TemplateStudioModal";
 
 const BlogDetail = () => {
   const { id } = useParams();
   const post = blogPosts.find((p) => p.id === Number(id));
+  const commentFormRef = useRef<HTMLDivElement>(null);
+
   const [commentForm, setCommentForm] = useState({ name: "", email: "", website: "", comment: "", save: false });
+  const [showStudioModal, setShowStudioModal] = useState(false);
+  const [dynamicComments, setDynamicComments] = useState<any[]>([]);
+
+  // Charger les commentaires spécifiques à cet article depuis localStorage
+  useEffect(() => {
+    if (!post) return;
+    const key = `blog-comments-${post.id}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      setDynamicComments(JSON.parse(stored));
+    } else {
+      setDynamicComments(post.comments);
+    }
+  }, [post]);
 
   if (!post) {
     return (
@@ -37,8 +54,31 @@ const BlogDetail = () => {
       toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires." });
       return;
     }
-    toast({ title: "Commentaire envoyé", description: "Votre commentaire a été soumis avec succès." });
+
+    const newComment = {
+      id: Date.now(),
+      author: commentForm.name,
+      date: new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }),
+      comment: commentForm.comment
+    };
+
+    const updatedComments = [...dynamicComments, newComment];
+    setDynamicComments(updatedComments);
+
+    if (post) {
+      localStorage.setItem(`blog-comments-${post.id}`, JSON.stringify(updatedComments));
+    }
+
+    toast({ title: "Commentaire envoyé", description: "Votre commentaire a été publié avec succès." });
     setCommentForm({ name: "", email: "", website: "", comment: "", save: false });
+  };
+
+  const handleShareClick = () => {
+    setShowStudioModal(true);
+  };
+
+  const handleCommentClick = () => {
+    commentFormRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const paragraphs = post.content.split("\n\n");
@@ -101,13 +141,22 @@ const BlogDetail = () => {
               <div className="bg-card rounded-2xl border border-border p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
                   <p className="font-semibold text-foreground text-sm">Vous avez aimé cet article ?</p>
-                  <p className="text-muted-foreground text-xs">Partagez-le avec vos proches.</p>
+                  <p className="text-muted-foreground text-xs">Créez une publication pro et partagez-la.</p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" size="sm" className="gap-2 text-xs border-accent text-accent hover:bg-accent hover:text-accent-foreground">
-                    <Share2 className="w-3.5 h-3.5" /> Partager
+                  <Button
+                    onClick={handleShareClick}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-xs border-accent text-accent hover:bg-accent hover:text-accent-foreground font-semibold"
+                  >
+                    <Share2 className="w-3.5 h-3.5" /> Partager (KoraChannel)
                   </Button>
-                  <Button size="sm" className="gap-2 text-xs bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <Button
+                    onClick={handleCommentClick}
+                    size="sm"
+                    className="gap-2 text-xs bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
+                  >
                     <MessageCircle className="w-3.5 h-3.5" /> Commenter
                   </Button>
                 </div>
@@ -115,9 +164,9 @@ const BlogDetail = () => {
 
               {/* Comments */}
               <div className="mb-8">
-                <h2 className="text-xl font-display font-bold text-foreground mb-6">{post.comments.length} Commentaire(s)</h2>
+                <h2 className="text-xl font-display font-bold text-foreground mb-6">{dynamicComments.length} Commentaire(s)</h2>
                 <div className="space-y-4">
-                  {post.comments.map((comment) => (
+                  {dynamicComments.map((comment) => (
                     <div key={comment.id} className="bg-card rounded-xl border border-border p-5">
                       <div className="flex items-start gap-3 mb-3">
                         <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-sm">
@@ -137,7 +186,7 @@ const BlogDetail = () => {
               </div>
 
               {/* Comment Form */}
-              <div className="bg-card rounded-2xl border border-border p-6">
+              <div ref={commentFormRef} className="bg-card rounded-2xl border border-border p-6">
                 <h3 className="text-lg font-display font-bold text-foreground mb-1">Laisser un commentaire</h3>
                 <p className="text-xs text-muted-foreground mb-5">Les champs obligatoires sont indiqués avec *</p>
                 <form onSubmit={handleSubmitComment} className="space-y-4">
@@ -237,6 +286,26 @@ const BlogDetail = () => {
         </div>
       </main>
       <Footer />
+
+      {/* Modal KoraChannel dédié aux articles de blog */}
+      {showStudioModal && (
+        <TemplateStudioModal
+          isOpen={showStudioModal}
+          onClose={() => setShowStudioModal(false)}
+          listing={{
+            id: post.id,
+            title: post.title,
+            category: post.category,
+            price: "Lecture gratuite",
+            image: post.image,
+            rating: 5.0,
+            reviewCount: dynamicComments.length,
+            isVerified: true,
+            availability: "Disponible",
+            guarantee: "Isoko Blog"
+          }}
+        />
+      )}
     </div>
   );
 };

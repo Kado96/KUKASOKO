@@ -236,7 +236,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
       style={{
         width: displayWidth ? `${displayWidth}px` : "100%",
         height: displayHeight ? `${displayHeight}px` : "auto",
-        imageRendering: "crisp-edges",
+        imageRendering: "auto",
       }}
       className={`rounded-xl shadow-xl ${className}`}
     />
@@ -250,8 +250,8 @@ function drawTopBadge(
   S: number, accentColor: string, category: string,
   logoImg?: HTMLImageElement
 ) {
-  const logoSize = Math.round(64 * S); // taille du logo carré arrondi
-  const logoRadius = Math.round(14 * S);
+  const logoSize = Math.round(112 * S); // logo bien visible
+  const logoRadius = Math.round(20 * S);
 
   // Dessiner le logo KUKASOKO en carré arrondi avec clip
   ctx.save();
@@ -285,17 +285,17 @@ function drawTopBadge(
   ctx.restore();
 
   // Pill catégorie (à droite du logo)
-  const pillH = Math.round(40 * S);
-  const pillX = x + logoSize + Math.round(14 * S);
+  const pillH = Math.round(44 * S);
+  const pillX = x + logoSize + Math.round(16 * S);
   const pillY = y + (logoSize - pillH) / 2;
-  ctx.font = `700 ${Math.round(18 * S)}px Inter, system-ui, sans-serif`;
-  const pillW = ctx.measureText(category).width + Math.round(30 * S);
+  ctx.font = `700 ${Math.round(20 * S)}px Inter, system-ui, sans-serif`;
+  const pillW = ctx.measureText(category).width + Math.round(34 * S);
   rr(ctx, pillX, pillY, pillW, pillH, pillH / 2);
   ctx.fillStyle = accentColor;
   ctx.fill();
   ctx.fillStyle = "#fff";
   ctx.textBaseline = "middle";
-  ctx.fillText(category, pillX + Math.round(15 * S), pillY + pillH / 2);
+  ctx.fillText(category, pillX + Math.round(17 * S), pillY + pillH / 2);
   ctx.textBaseline = "top";
 }
 

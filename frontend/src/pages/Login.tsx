@@ -1,4 +1,4 @@
-import Navbar from "@/components/Navbar";
+﻿import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -41,7 +41,7 @@ const Login = () => {
     try {
       if (isLogin) {
         await login(form.email, form.password);
-        toast({ title: "Connexion réussie ✅", description: "Bienvenue sur Isoko !" });
+        toast({ title: "Connexion réussie ✅", description: "Bienvenue sur Kukasoko !" });
         navigate("/");
       } else {
         await register({
@@ -73,7 +73,7 @@ const Login = () => {
               {isLogin ? "Se connecter" : "Créer un compte"}
             </h1>
             <p className="text-primary-foreground/70">
-              {isLogin ? "Accédez à votre compte Isoko" : "Rejoignez la communauté Isoko"}
+              {isLogin ? "Accédez à votre compte Kukasoko" : "Rejoignez la communauté Kukasoko"}
             </p>
           </div>
         </div>
@@ -255,7 +255,7 @@ const Login = () => {
                         "google",
                         "mock_google_token_12345"
                       );
-                      toast({ title: "Connexion Google réussie ✅", description: "Bienvenue sur Isoko !" });
+                      toast({ title: "Connexion Google réussie ✅", description: "Bienvenue sur Kukasoko !" });
                       navigate("/");
                     } catch (err: any) {
                       toast({ title: "Erreur", description: "Connexion Google impossible", variant: "destructive" });
@@ -288,7 +288,7 @@ const Login = () => {
                         "facebook",
                         "mock_fb_token_67890"
                       );
-                      toast({ title: "Connexion Facebook réussie ✅", description: "Bienvenue sur Isoko !" });
+                      toast({ title: "Connexion Facebook réussie ✅", description: "Bienvenue sur Kukasoko !" });
                       navigate("/");
                     } catch (err: any) {
                       toast({ title: "Erreur", description: "Connexion Facebook impossible", variant: "destructive" });

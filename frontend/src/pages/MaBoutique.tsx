@@ -1,4 +1,4 @@
-import Navbar from "@/components/Navbar";
+﻿import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,14 @@ import {
   Store, MapPin, Phone, ImagePlus, Clock, CheckCircle2,
   Edit, Trash2, Plus, Navigation, Loader2, Send, MessageCircle,
   Search, Paperclip, Eye, Package, Star, ShoppingBag,
-  ArrowRight, LayoutGrid, X, Lock, AlertCircle, Save
+  ArrowRight, LayoutGrid, X, Lock, AlertCircle, Save, Camera
 } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import categoryImmobilier from "@/assets/category-immobilier.jpg";
 import { useAuth } from "@/contexts/AuthContext";
-import { merchantsAPI, messagesAPI, listingsAPI, API_BASE } from "@/services/api";
+import { merchantsAPI, messagesAPI, listingsAPI, mediaAPI, API_BASE } from "@/services/api";
 import { useChatWebSocket } from "@/hooks/useWebSocket";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Link, useNavigate } from "react-router-dom";
@@ -514,6 +514,20 @@ const MaBoutique = () => {
   const [categoriesList, setCategoriesList] = useState<Array<{ value: string; label: string }>>([]);
   const [editUploading, setEditUploading] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editingShop, setEditingShop] = useState(false);
+  const [shopSubmitting, setShopSubmitting] = useState(false);
+  const [shopUploading, setShopUploading] = useState<"logo" | "cover" | null>(null);
+  const [shopForm, setShopForm] = useState({
+    name: "",
+    description: "",
+    category: "",
+    address: "",
+    phone: "",
+    logo: null as string | null,
+    cover: null as string | null,
+  });
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Charger les catégories au montage
   useEffect(() => {
@@ -606,12 +620,106 @@ const MaBoutique = () => {
       .catch(() => {});
   }, [isAuthenticated, user, fetchMyListings]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: "logo" | "cover") => {
+  const uploadShopImage = async (file: File, field: "logo" | "cover") => {
+    const category = field === "cover" ? "banner" : "merchant";
+    const res = await mediaAPI.upload([file], category);
+    return res.data.url as string;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "logo" | "cover") => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setForm({ ...form, [field]: reader.result as string });
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setShopUploading(field);
+    try {
+      const url = await uploadShopImage(file, field);
+      setForm((prev) => ({ ...prev, [field]: url }));
+      toast({ title: field === "cover" ? "Bannière ajoutée" : "Logo ajouté" });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger l'image.", variant: "destructive" });
+    } finally {
+      setShopUploading(null);
+      e.target.value = "";
+    }
+  };
+
+  const handleEditShopImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "logo" | "cover") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setShopUploading(field);
+    try {
+      const url = await uploadShopImage(file, field);
+      setShopForm((prev) => ({ ...prev, [field]: url }));
+      toast({ title: field === "cover" ? "Bannière mise à jour" : "Logo mis à jour" });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de charger l'image.", variant: "destructive" });
+    } finally {
+      setShopUploading(null);
+      e.target.value = "";
+    }
+  };
+
+  const openEditShop = () => {
+    if (!shop) return;
+    setShopForm({
+      name: shop.name,
+      description: shop.description,
+      category: shop.category,
+      address: shop.address,
+      phone: shop.phone,
+      logo: shop.logo,
+      cover: shop.cover,
+    });
+    setEditingShop(true);
+  };
+
+  const handleUpdateShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shopForm.name.trim() || !shopForm.description.trim()) {
+      toast({ title: "Champs requis", description: "Nom et description sont obligatoires.", variant: "destructive" });
+      return;
+    }
+    setShopSubmitting(true);
+    try {
+      const res = await merchantsAPI.updateMe({
+        shop_name: shopForm.name.trim(),
+        shop_description: shopForm.description.trim(),
+        address: shopForm.address.trim() || null,
+        phone: shopForm.phone.trim() || null,
+        whatsapp: shopForm.phone.trim() || null,
+        logo_url: shopForm.logo,
+        banner_url: shopForm.cover,
+      });
+      const data = res.data as {
+        shop_name: string;
+        shop_description: string;
+        address?: string;
+        phone?: string;
+        logo_url?: string;
+        banner_url?: string;
+        subscription_pack?: string;
+        latitude?: number;
+        longitude?: number;
+      };
+      setShop({
+        ...shop!,
+        name: data.shop_name,
+        description: data.shop_description || "",
+        category: shopForm.category,
+        address: data.address || "",
+        phone: data.phone || "",
+        logo: data.logo_url || null,
+        cover: data.banner_url || null,
+      });
+      setEditingShop(false);
+      toast({ title: "Boutique mise à jour ! ✨" });
+    } catch (err: any) {
+      toast({
+        title: "Erreur",
+        description: err?.response?.data?.detail || "Impossible de modifier la boutique.",
+        variant: "destructive",
+      });
+    } finally {
+      setShopSubmitting(false);
     }
   };
 
@@ -628,6 +736,8 @@ const MaBoutique = () => {
         address: form.address,
         phone: form.phone,
         whatsapp: form.phone,
+        logo_url: form.logo,
+        banner_url: form.cover,
       });
       const data = res.data as {
         shop_name: string; shop_description: string;
@@ -863,7 +973,7 @@ const MaBoutique = () => {
               <form onSubmit={handleCreate} className="space-y-5">
                 <div>
                   <label htmlFor="shop-cover" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Image de couverture</label>
-                  <div className="mt-1 relative aspect-[3/1] rounded-xl border-2 border-dashed border-border bg-secondary/50 overflow-hidden cursor-pointer hover:border-accent transition-colors">
+                  <div className="mt-1 relative h-44 sm:h-52 md:h-56 rounded-xl border-2 border-dashed border-border bg-secondary/50 overflow-hidden cursor-pointer hover:border-accent transition-colors">
                     {form.cover ? (
                       <img src={form.cover} alt="Cover" className="w-full h-full object-cover" />
                     ) : (
@@ -926,38 +1036,134 @@ const MaBoutique = () => {
             </div>
           )}
 
-          {/* Shop Info (si boutique existante) */}
+          {/* Shop Info (si boutique existante) — couverture style Facebook */}
           {hasShop && shop && (
             <div className="mb-8 bg-card rounded-2xl border border-border overflow-hidden shadow-md">
-              <div className="h-32 relative overflow-hidden">
-                {shop.cover
-                  ? <img src={shop.cover} alt="Cover" className="w-full h-full object-cover" />
-                  : <img src={categoryImmobilier} alt="Cover" className="w-full h-full object-cover" />}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-              </div>
-              <div className="p-5 flex flex-col md:flex-row items-center md:items-end gap-4 -mt-10 relative z-10">
-                <div className="w-20 h-20 rounded-2xl border-4 border-card bg-card shadow-xl overflow-hidden shrink-0">
-                  {shop.logo
-                    ? <img src={shop.logo} alt="Logo" className="w-full h-full object-cover" />
-                    : <div className="w-full h-full bg-gradient-to-br from-[#febb2d]/25 to-[#febb2d]/5 flex items-center justify-center"><Store className="w-8 h-8 text-[#febb2d]" /></div>}
+              {/* Photo de couverture — grande et bien visible */}
+              <div className="relative h-44 sm:h-52 md:h-64 lg:h-72 bg-muted group">
+                {shop.cover ? (
+                  <img
+                    src={shop.cover}
+                    alt={`Couverture ${shop.name}`}
+                    className="w-full h-full object-cover object-center"
+                  />
+                ) : (
+                  <img
+                    src={categoryImmobilier}
+                    alt="Couverture par défaut"
+                    className="w-full h-full object-cover object-center"
+                  />
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => { openEditShop(); setTimeout(() => coverInputRef.current?.click(), 100); }}
+                    className="h-9 px-3 rounded-full bg-black/55 hover:bg-black/70 text-white text-xs font-medium flex items-center gap-1.5 backdrop-blur-sm"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Changer la bannière</span>
+                  </button>
+                  {shop.cover && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm("Supprimer la bannière ?")) return;
+                        try {
+                          await merchantsAPI.updateMe({ banner_url: null });
+                          setShop({ ...shop, cover: null });
+                          toast({ title: "Bannière supprimée" });
+                        } catch {
+                          toast({ title: "Erreur", variant: "destructive" });
+                        }
+                      }}
+                      className="h-9 w-9 rounded-full bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center backdrop-blur-sm"
+                      title="Supprimer la bannière"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                <div className="flex-1 text-center md:text-left pt-2">
+                {/* Logo chevauchant la couverture */}
+                <div className="absolute -bottom-10 left-4 sm:left-6 md:left-8 group/logo">
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-card bg-card shadow-xl overflow-hidden">
+                    {shop.logo ? (
+                      <img src={shop.logo} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#febb2d]/25 to-[#febb2d]/5 flex items-center justify-center">
+                        <Store className="w-8 h-8 text-[#febb2d]" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => { openEditShop(); setTimeout(() => logoInputRef.current?.click(), 100); }}
+                        className="h-8 w-8 rounded-full bg-white/90 text-foreground flex items-center justify-center"
+                        title="Changer le logo"
+                      >
+                        <Camera className="w-4 h-4" />
+                      </button>
+                      {shop.logo && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm("Supprimer le logo ?")) return;
+                            try {
+                              await merchantsAPI.updateMe({ logo_url: null });
+                              setShop({ ...shop, logo: null });
+                              toast({ title: "Logo supprimé" });
+                            } catch {
+                              toast({ title: "Erreur", variant: "destructive" });
+                            }
+                          }}
+                          className="h-8 w-8 rounded-full bg-red-600 text-white flex items-center justify-center"
+                          title="Supprimer le logo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Infos boutique — sous la couverture */}
+              <div className="pt-14 pb-5 px-4 sm:px-6 md:px-8 flex flex-col md:flex-row md:items-end gap-4">
+                <div className="flex-1 text-center md:text-left md:ml-28">
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1">
-                    <h2 className="text-xl font-display font-bold text-foreground">{shop.name}</h2>
+                    <h2 className="text-xl md:text-2xl font-display font-bold text-foreground">{shop.name}</h2>
                     <Badge className="bg-green-500/10 text-green-600 border-0 text-xs py-0.5 px-2 font-semibold">
                       <CheckCircle2 className="w-3 h-3 mr-1" />
                       <span>Actif</span>
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-1 max-w-lg">{shop.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 max-w-lg mx-auto md:mx-0">{shop.description}</p>
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2 text-xs text-muted-foreground">
-                    {shop.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-[#febb2d]" /><span>{shop.address}</span></span>}
-                    {shop.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-[#febb2d]" /><span>{shop.phone}</span></span>}
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-[#febb2d]" /><span>Créée aujourd'hui</span></span>
+                    {shop.address && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#febb2d]" />
+                        <span>{shop.address}</span>
+                      </span>
+                    )}
+                    {shop.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-[#febb2d]" />
+                        <span>{shop.phone}</span>
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-[#febb2d]" />
+                      <span>Créée aujourd'hui</span>
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-secondary rounded-full gap-1.5">
+                <div className="flex items-center justify-center md:justify-end gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border text-foreground hover:bg-secondary rounded-full gap-1.5"
+                    onClick={openEditShop}
+                  >
                     <Edit className="w-4 h-4" />
                     <span>Modifier</span>
                   </Button>
@@ -1128,7 +1334,7 @@ const MaBoutique = () => {
                 <span>Découvrez le marketplace</span>
               </h3>
               <p className="text-zinc-400 text-sm">
-                <span>Explorez toutes les annonces publiées sur Isoko.</span>
+                <span>Explorez toutes les annonces publiées sur Kukasoko.</span>
               </p>
             </div>
             <Link
@@ -1139,6 +1345,189 @@ const MaBoutique = () => {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+
+          {/* Modale d'édition de la boutique */}
+          {editingShop && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-5 border-b border-border flex items-center justify-between">
+                  <h3 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
+                    <Store className="w-5 h-5 text-[#febb2d]" />
+                    <span>Modifier ma boutique</span>
+                  </h3>
+                  <button
+                    onClick={() => setEditingShop(false)}
+                    className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <form onSubmit={handleUpdateShop} className="flex-1 overflow-y-auto p-5 space-y-5">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bannière</label>
+                    <div className="mt-1 relative h-36 sm:h-44 rounded-xl border-2 border-dashed border-border bg-secondary/30 overflow-hidden">
+                      {shopForm.cover ? (
+                        <img src={shopForm.cover} alt="Bannière" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                          <ImagePlus className="w-8 h-8 mb-2" />
+                          <span className="text-sm">Aucune bannière</span>
+                        </div>
+                      )}
+                      <input
+                        ref={coverInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleEditShopImageUpload(e, "cover")}
+                      />
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => coverInputRef.current?.click()}
+                          disabled={shopUploading === "cover"}
+                          className="h-8 px-3 rounded-full bg-black/60 hover:bg-black/75 text-white text-xs flex items-center gap-1"
+                        >
+                          {shopUploading === "cover" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                          <span>Changer</span>
+                        </button>
+                        {shopForm.cover && (
+                          <button
+                            type="button"
+                            onClick={() => setShopForm((prev) => ({ ...prev, cover: null }))}
+                            className="h-8 w-8 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center"
+                            title="Supprimer la bannière"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logo</label>
+                      <div className="mt-1 relative w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-secondary/30 overflow-hidden">
+                        {shopForm.logo ? (
+                          <img src={shopForm.logo} alt="Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Store className="w-8 h-8 text-[#febb2d]" />
+                          </div>
+                        )}
+                        <input
+                          ref={logoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleEditShopImageUpload(e, "logo")}
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => logoInputRef.current?.click()}
+                            disabled={shopUploading === "logo"}
+                            className="h-8 w-8 rounded-full bg-white text-foreground flex items-center justify-center"
+                          >
+                            {shopUploading === "logo" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                          </button>
+                          {shopForm.logo && (
+                            <button
+                              type="button"
+                              onClick={() => setShopForm((prev) => ({ ...prev, logo: null }))}
+                              className="h-8 w-8 rounded-full bg-red-600 text-white flex items-center justify-center"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <label htmlFor="edit-shop-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nom de la boutique *</label>
+                        <Input
+                          id="edit-shop-name"
+                          value={shopForm.name}
+                          onChange={(e) => setShopForm({ ...shopForm, name: e.target.value })}
+                          className="mt-1 bg-background"
+                          placeholder="Ma boutique"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-shop-category" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Catégorie</label>
+                        <select
+                          id="edit-shop-category"
+                          value={shopForm.category}
+                          onChange={(e) => setShopForm({ ...shopForm, category: e.target.value })}
+                          className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="Général">Général</option>
+                          <option value="Immobilier">Immobilier</option>
+                          <option value="À vendre">À vendre</option>
+                          <option value="Services">Services</option>
+                          <option value="Alimentation">Alimentation</option>
+                          <option value="Électronique">Électronique</option>
+                          <option value="Mode">Mode</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit-shop-description" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description *</label>
+                    <Textarea
+                      id="edit-shop-description"
+                      value={shopForm.description}
+                      onChange={(e) => setShopForm({ ...shopForm, description: e.target.value })}
+                      rows={3}
+                      className="mt-1 bg-background resize-none"
+                      placeholder="Décrivez votre boutique..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="edit-shop-address" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Adresse</label>
+                      <Input
+                        id="edit-shop-address"
+                        value={shopForm.address}
+                        onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })}
+                        className="mt-1 bg-background"
+                        placeholder="Bujumbura, Ngagara Q3"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-shop-phone" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Téléphone</label>
+                      <Input
+                        id="edit-shop-phone"
+                        value={shopForm.phone}
+                        onChange={(e) => setShopForm({ ...shopForm, phone: e.target.value })}
+                        className="mt-1 bg-background"
+                        placeholder="+257 XX XX XX"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2 border-t border-border">
+                    <Button type="button" variant="outline" onClick={() => setEditingShop(false)} className="rounded-full">
+                      Annuler
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={shopSubmitting}
+                      className="flex-1 bg-[#febb2d] hover:bg-[#e2a828] text-zinc-950 font-semibold rounded-full"
+                    >
+                      {shopSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                      <span>Enregistrer les modifications</span>
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* Modale d'édition d'annonce */}
           {editingListing && (

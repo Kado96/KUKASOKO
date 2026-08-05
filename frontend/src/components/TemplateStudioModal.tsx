@@ -37,12 +37,14 @@ interface TemplateStudioModalProps {
     sellerName?: string;
     phone?: string;
   };
+  isBlog?: boolean;
 }
 
 export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
   isOpen,
   onClose,
   listing,
+  isBlog = false,
 }) => {
   const [activeChannel, setActiveChannel] = useState<string>("instagram_post");
   const [activeTab, setActiveTab] = useState<"visuals" | "captions" | "xml" | "android">("visuals");
@@ -103,11 +105,11 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
     }
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `korachannel_${listing.id}_${channelId}.png`;
+    a.download = `KUKASOKO_${listing.id}_${channelId}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast({ title: "Image HD téléchargée ! 🖼️", description: `Format ${SOCIAL_CHANNELS[channelId]?.name} prêt à publier — KoraChannel.` });
+    toast({ title: "Image HD téléchargée ! 🖼️", description: `Format ${SOCIAL_CHANNELS[channelId]?.name} prêt à publier — KUKASOKO.` });
   };
 
   return (
@@ -120,7 +122,7 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
             </div>
             <div>
               <DialogTitle className="text-xl font-display font-bold text-white leading-tight">
-                Studio de Publication Kora
+                Studio de Publication Kukasoko
               </DialogTitle>
               <DialogDescription className="text-xs text-white/80 mt-0.5 leading-snug">
                 1 seule annonce ➔ Génération automatique pour Web, Android & Tous Réseaux Sociaux
@@ -128,7 +130,7 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
             </div>
           </div>
           <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 text-xs px-3 py-1 font-semibold shrink-0 ml-3">
-            KoraChannel
+            KUKASOKO
           </Badge>
         </DialogHeader>
 
@@ -192,6 +194,7 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                     displayHeight={460}
                     accentColor={accentColor}
                     customText={customText || undefined}
+                    isBlog={isBlog}
                     onRendered={(url) => setGeneratedImages((prev) => ({ ...prev, [activeChannel]: url }))}
                   />
                 </div>

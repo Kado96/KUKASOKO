@@ -8,14 +8,9 @@ import { allListings } from "@/data/listings";
 import ShareModal from "@/components/ShareModal";
 
 import { listingsAPI, API_BASE } from "@/services/api";
+import { CategorySearchFilters, type CatNode } from "@/components/CategorySearchFilters";
 
-type CatNode = {
-  id: number;
-  name: string;
-  name_fr?: string | null;
-  parent_id?: number | null;
-  children?: CatNode[];
-};
+type CatNodeLocal = CatNode;
 
 const Annonces = () => {
   const [searchParams] = useSearchParams();
@@ -24,7 +19,7 @@ const Annonces = () => {
   const [filterSubCat, setFilterSubCat] = useState("all");
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tree, setTree] = useState<CatNode[]>([]);
+  const [tree, setTree] = useState<CatNodeLocal[]>([]);
 
   useEffect(() => {
     listingsAPI
@@ -124,7 +119,6 @@ const Annonces = () => {
   }, [searchParams, tree]);
 
   const selectedParent = tree.find((c) => String(c.id) === filterCat);
-  const subcats = selectedParent?.children ?? [];
 
   const activeCatId = filterSubCat !== "all" ? filterSubCat : filterCat;
   const childIds =
@@ -162,67 +156,34 @@ const Annonces = () => {
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <div className="relative flex-1">
+          {/* Filters — mobile ergonomique */}
+          <div className="mb-8 space-y-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 id="annonces-search"
                 name="search"
-                type="text"
+                type="search"
                 autoComplete="off"
                 placeholder="Rechercher une annonce..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent shadow-sm"
               />
             </div>
-            <select
-              id="annonces-category"
-              name="annonces-category"
-              value={filterCat}
-              onChange={(e) => {
-                setFilterCat(e.target.value);
-                setFilterSubCat("all");
-              }}
-              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="all">Toutes les catégories</option>
-              {tree.length > 0 ? (
-                tree.map((cat) => (
-                  <option key={cat.id} value={String(cat.id)}>
-                    {cat.name_fr || cat.name}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="Immobilier">Immobilier</option>
-                  <option value="Services">Services</option>
-                  <option value="À vendre">À vendre</option>
-                </>
-              )}
-            </select>
-            <select
-              id="annonces-subcategory"
-              name="annonces-subcategory"
-              value={filterSubCat}
-              onChange={(e) => setFilterSubCat(e.target.value)}
-              disabled={subcats.length === 0}
-              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-70 disabled:text-muted-foreground"
-            >
-              <option value="all">
-                {filterCat === "all"
-                  ? "Sous-catégorie"
-                  : subcats.length === 0
-                    ? "Aucune sous-catégorie"
-                    : "Toutes les sous-catégories"}
-              </option>
-              {subcats.map((sub) => (
-                <option key={sub.id} value={String(sub.id)}>
-                  {sub.name_fr || sub.name}
-                </option>
-              ))}
-            </select>
+            <div className="bg-card rounded-xl border border-border p-3 shadow-sm">
+              <CategorySearchFilters
+                tree={tree}
+                category={filterCat}
+                subCategory={filterSubCat}
+                onCategoryChange={(v) => {
+                  setFilterCat(v);
+                  setFilterSubCat("all");
+                }}
+                onSubCategoryChange={setFilterSubCat}
+                variant="page"
+              />
+            </div>
           </div>
 
           {/* Results */}

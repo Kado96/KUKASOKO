@@ -64,17 +64,17 @@ def create_merchant_profile(
 
 @router.patch("/me", response_model=schemas.MerchantProfileOut)
 def update_merchant_profile(
-    data: schemas.MerchantProfileCreate,
+    data: schemas.MerchantProfileUpdate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Mettre à jour son profil marchand."""
+    """Mettre à jour son profil marchand (champs partiels)."""
     profile = db.query(models.MerchantProfile).filter(
         models.MerchantProfile.user_id == current_user.id
     ).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profil marchand introuvable")
-    for field, value in data.model_dump(exclude_none=True).items():
+    for field, value in data.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
     db.commit()
     db.refresh(profile)

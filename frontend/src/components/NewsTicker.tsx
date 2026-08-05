@@ -113,11 +113,11 @@ const NewsTicker = () => {
         className="inline-flex items-center"
       >
         {/* Bullet separator */}
-        <span className="mx-5 text-red-500 font-bold text-base select-none">●</span>
+        <span className="mx-3 sm:mx-5 text-red-500 font-bold text-xs sm:text-base select-none">●</span>
 
         {/* Message text */}
         <span
-          className="text-sm font-semibold tracking-wide"
+          className="text-xs sm:text-sm font-semibold tracking-wide"
           style={{ color: msg.paid ? "#fbbf24" : "#f1f5f9" }}
         >
           {msg.text}
@@ -133,27 +133,19 @@ const NewsTicker = () => {
     ));
 
   return (
-    <div
-      className="fixed bottom-0 left-0 right-0 z-[100] flex items-stretch select-none shadow-md"
-      style={{ height: "44px" }}
-    >
-      {/* ── Red label ── */}
-      <div className="flex items-center gap-2 px-4 bg-red-600 text-white shrink-0 z-10">
-        <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
-        <span className="text-[11px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
+    <div className="fixed bottom-0 left-0 right-0 z-[100] flex items-stretch select-none shadow-md h-9 sm:h-11">
+      {/* ── Red label — icône seule sur mobile, "Info" dès sm ── */}
+      <div className="flex items-center gap-1 px-2.5 sm:gap-2 sm:px-3.5 bg-red-600 text-white shrink-0 z-10">
+        <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse shrink-0" />
+        <span className="hidden sm:inline text-[11px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
           Info
         </span>
       </div>
 
-      {/* ── Triangle separator ── */}
+      {/* ── Triangle separator — étroit sur mobile ── */}
       <div
-        className="shrink-0"
-        style={{
-          width: 0,
-          height: 0,
-          borderTop: "44px solid #dc2626",
-          borderRight: "20px solid transparent",
-        }}
+        className="shrink-0 w-0 h-0 border-t-[36px] sm:border-t-[44px] border-r-[8px] sm:border-r-[16px] border-t-red-600 border-r-transparent"
+        aria-hidden
       />
 
       {/* ── Scrolling viewport ── */}
@@ -162,18 +154,14 @@ const NewsTicker = () => {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Track — contains 2 identical copies */}
         <div
           ref={trackRef}
           className="flex items-center whitespace-nowrap will-change-transform"
           style={{ transform: "translateX(0)" }}
         >
-          {/* Copy A — measured to get the single-copy width */}
           <span ref={copyARef} className="inline-flex items-center">
             {renderMessages("a")}
           </span>
-
-          {/* Copy B — seamless continuation */}
           <span className="inline-flex items-center" aria-hidden>
             {renderMessages("b")}
           </span>
@@ -183,7 +171,7 @@ const NewsTicker = () => {
       {/* ── Close button ── */}
       <button
         onClick={() => setIsVisible(false)}
-        className="shrink-0 flex items-center justify-center w-10 bg-[#0d0d1a] hover:bg-[#1a1a2e] text-white/50 hover:text-white transition-colors"
+        className="shrink-0 flex items-center justify-center w-8 sm:w-10 bg-[#0d0d1a] hover:bg-[#1a1a2e] text-white/50 hover:text-white transition-colors"
         title="Fermer le bandeau"
       >
         <X className="w-3.5 h-3.5" />

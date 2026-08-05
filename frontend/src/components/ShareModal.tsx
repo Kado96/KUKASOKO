@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Share2,
   Copy,
@@ -50,7 +50,7 @@ export const ShareModal: React.FC<ShareButtonProps> = ({
   const [open, setOpen] = useState(false);
 
   const fullUrl = url.startsWith("http") ? url : `${window.location.origin}${url}`;
-  const shareText = `Regarde cette annonce sur ISOKO : ${title} ${price ? `(${price})` : ""} - ${fullUrl}`;
+  const shareText = `Regarde cette annonce sur Kukasoko : ${title} ${price ? `(${price})` : ""} - ${fullUrl}`;
 
   // Copy link
   const handleCopyLink = () => {
@@ -110,7 +110,7 @@ export const ShareModal: React.FC<ShareButtonProps> = ({
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`,
     twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(fullUrl)}`,
     telegram: `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent(title)}`,
-    email: `mailto:?subject=${encodeURIComponent(`Annonce ISOKO : ${title}`)}&body=${encodeURIComponent(shareText)}`,
+    email: `mailto:?subject=${encodeURIComponent(`Annonce KUKASOKO : ${title}`)}&body=${encodeURIComponent(shareText)}`,
   };
 
   const openShare = (linkUrl: string, name: string) => {
@@ -123,7 +123,7 @@ export const ShareModal: React.FC<ShareButtonProps> = ({
     if (image) {
       const a = document.createElement("a");
       a.href = image;
-      a.download = `isoko-${title.toLowerCase().replace(/\s+/g, "-")}.jpg`;
+      a.download = `KUKASOKO-${title.toLowerCase().replace(/\s+/g, "-")}.jpg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -141,7 +141,7 @@ export const ShareModal: React.FC<ShareButtonProps> = ({
     if (!image) return;
     const a = document.createElement("a");
     a.href = image;
-    a.download = `isoko-annonce-${title.toLowerCase().replace(/\s+/g, "-")}.jpg`;
+    a.download = `KUKASOKO-annonce-${title.toLowerCase().replace(/\s+/g, "-")}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -9,7 +9,7 @@ export const api = axios.create({
 
 // Auto-attach JWT token from localStorage
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("isoko_token");
+  const token = localStorage.getItem("kukasoko_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,7 +23,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       if (currentPath !== "/admin" && currentPath !== "/login") {
-        localStorage.removeItem("isoko_token");
+        localStorage.removeItem("kukasoko_token");
         window.location.href = "/login";
       }
     }

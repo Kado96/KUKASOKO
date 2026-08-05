@@ -1,4 +1,4 @@
-// Utilisation de chemins publics absolus directes pour éviter le blocage CORB.
+﻿// Utilisation de chemins publics absolus directes pour éviter le blocage CORB.
 
 export interface BlogComment {
   id: number;
@@ -23,7 +23,7 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     id: 1,
-    title: "Comment vendre rapidement sur Isoko",
+    title: "Comment vendre rapidement sur Kukasoko",
     excerpt: "Découvrez nos conseils pour rédiger des annonces qui attirent les acheteurs et maximiser vos chances de vente.",
     date: "Novembre 17, 2021",
     image: "/category-avendre.jpg",
@@ -58,24 +58,24 @@ L'immobilier durable et écologique devient un critère de choix pour de nombreu
       { id: 1, author: "Jean-Pierre", date: "Novembre 6, 2021", comment: "Article très informatif. Les tendances décrites correspondent à ce que j'observe sur le terrain." },
       { id: 2, author: "Claudine", date: "Novembre 7, 2021", comment: "Merci pour ces informations précieuses. Cela m'aide dans mes décisions d'investissement." },
     ],
-    relatedPost: { title: "Comment vendre rapidement sur Isoko", id: 1 },
+    relatedPost: { title: "Comment vendre rapidement sur Kukasoko", id: 1 },
   },
   {
     id: 3,
     title: "Trouver les meilleurs services près de chez vous",
-    excerpt: "Guide complet pour utiliser Isoko et dénicher les prestataires de services les plus fiables.",
+    excerpt: "Guide complet pour utiliser KUKASOKO et dénicher les prestataires de services les plus fiables.",
     date: "Novembre 1, 2021",
     image: "/category-services.jpg",
     category: "Guide",
     tags: ["Services", "Guide", "Prestataires"],
-    content: `Trouver un prestataire de services fiable peut être un véritable défi. Avec Isoko, nous simplifions cette recherche en vous proposant une plateforme centralisée où vous pouvez comparer les offres, lire les avis et contacter directement les prestataires.
+    content: `Trouver un prestataire de services fiable peut être un véritable défi. Avec KUKASOKO, nous simplifions cette recherche en vous proposant une plateforme centralisée où vous pouvez comparer les offres, lire les avis et contacter directement les prestataires.
 
 Commencez par définir vos besoins précis. Utilisez les filtres de recherche pour affiner vos résultats par catégorie, localisation et budget. Consultez les avis des autres utilisateurs pour vous faire une idée de la qualité du service.
 
 N'hésitez pas à contacter plusieurs prestataires pour comparer les devis. La transparence est essentielle : posez toutes vos questions avant de vous engager.`,
     comments: [
-      { id: 1, author: "Diane", date: "Novembre 2, 2021", comment: "Super guide ! J'ai trouvé un excellent plombier grâce à Isoko." },
+      { id: 1, author: "Diane", date: "Novembre 2, 2021", comment: "Super guide ! J'ai trouvé un excellent plombier grâce à KUKASOKO." },
     ],
-    relatedPost: { title: "Comment vendre rapidement sur Isoko", id: 1 },
+    relatedPost: { title: "Comment vendre rapidement sur Kukasoko", id: 1 },
   },
 ];

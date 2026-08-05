@@ -184,6 +184,21 @@ class MerchantProfileCreate(BaseModel):
     phone: Optional[str] = None
     whatsapp: Optional[str] = None
     opening_hours: Optional[str] = None
+    logo_url: Optional[str] = None
+    banner_url: Optional[str] = None
+
+
+class MerchantProfileUpdate(BaseModel):
+    shop_name: Optional[str] = None
+    shop_description: Optional[str] = None
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    opening_hours: Optional[str] = None
+    logo_url: Optional[str] = None
+    banner_url: Optional[str] = None
 class MerchantProfileUpdateSubscription(BaseModel):
     subscription_pack: str
 

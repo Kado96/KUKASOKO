@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+﻿import React, { useRef, useEffect } from "react";
 import { ListingTemplateData } from "@/services/TemplateEngineService";
 
 interface ListingCardCanvasProps {
@@ -10,6 +10,7 @@ interface ListingCardCanvasProps {
   accentColor?: string;
   customText?: string;
   className?: string;
+  isBlog?: boolean;
   onRendered?: (dataUrl: string) => void;
 }
 
@@ -83,6 +84,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
   accentColor = "#F59E0B",
   customText,
   className = "",
+  isBlog = false,
   onRendered,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -169,7 +171,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
         ctx.fillStyle = accentColor;
         ctx.fillRect(photoW, 0, Math.round(6 * S), H);
 
-        drawTextPanel(ctx, textX, 0, textW, H, S, PAD, data, accentColor, customText);
+        drawTextPanel(ctx, textX, 0, textW, H, S, PAD, data, accentColor, customText, isBlog);
 
         // Badge logo sur la photo
         drawTopBadge(ctx, Math.round(44 * S), Math.round(44 * S), S, accentColor, data.category, logoImg);
@@ -204,7 +206,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
         ctx.fillStyle = DARK_BG;
         ctx.fillRect(0, textY, W, textH + 4);
 
-        drawTextPanel(ctx, 0, textY, W, textH, S, PAD, data, accentColor, customText);
+        drawTextPanel(ctx, 0, textY, W, textH, S, PAD, data, accentColor, customText, isBlog);
 
         // Badge logo sur la photo
         drawTopBadge(ctx, PAD, Math.round(44 * S), S, accentColor, data.category, logoImg);
@@ -226,7 +228,7 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
     if (logoImg.complete) logoReady = true;
     if (imgReady && logoReady) draw();
 
-  }, [data, width, height, accentColor, customText]);
+  }, [data, width, height, accentColor, customText, isBlog]);
 
   return (
     <canvas
@@ -307,28 +309,29 @@ function drawTextPanel(
   S: number, PAD: number,
   data: ListingTemplateData,
   accentColor: string,
-  customText?: string
+  customText?: string,
+  isBlog?: boolean
 ) {
   const innerX = px + PAD;
   const innerW = pw - PAD * 2;
   let curY = py + Math.round(36 * S);
 
-  // ── Badge VÉRIFIÉ ──────────────────────────────────────────────────────────
-  const vLabel = "✔  PROFESSIONNEL VÉRIFIÉ";
+  // ── Badge VÉRIFIÉ / BLOG BADGE ─────────────────────────────────────────────
+  const vLabel = isBlog ? "📰  ARTICLE DE BLOG KUKASOKO" : "✔  PROFESSIONNEL VÉRIFIÉ";
   ctx.font = `700 ${Math.round(17 * S)}px Inter, system-ui, sans-serif`;
   const vW = ctx.measureText(vLabel).width + Math.round(28 * S);
   const vH = Math.round(36 * S);
   rr(ctx, innerX, curY, vW, vH, vH / 2);
-  ctx.fillStyle = "#10B981";
+  ctx.fillStyle = isBlog ? accentColor : "#10B981";
   ctx.fill();
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = isBlog ? "#000" : "#fff";
   ctx.textBaseline = "middle";
   ctx.fillText(vLabel, innerX + Math.round(14 * S), curY + vH / 2);
   ctx.textBaseline = "top";
   curY += vH + Math.round(30 * S);
 
   // ── TITRE (grand, impactant) ──────────────────────────────────────────────
-  const titleSize = Math.round(72 * S);
+  const titleSize = Math.round(isBlog ? 52 * S : 72 * S);
   ctx.font = `900 ${titleSize}px Inter, system-ui, sans-serif`;
   ctx.fillStyle = "#FFFFFF";
   const titleLines = wrap(ctx, data.title, innerW, 2);
@@ -336,75 +339,109 @@ function drawTextPanel(
   titleLines.forEach((ln, i) => {
     ctx.fillText(ln, innerX, curY + i * lineH);
   });
-  curY += titleLines.length * lineH + Math.round(18 * S);
+  curY += titleLines.length * lineH + Math.round(22 * S);
 
-  // ── Sous-titre (custom text ou description auto) ─────────────────────────
-  const subTxt = customText?.trim() || `${data.category} · Disponible dès maintenant`;
-  ctx.font = `400 ${Math.round(26 * S)}px Inter, system-ui, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.62)";
-  ctx.fillText(fit(ctx, subTxt, innerW), innerX, curY);
-  curY += Math.round(34 * S) + Math.round(22 * S);
+  if (isBlog) {
+    // ── BLOC RÉSUMÉ BLOG (3-4 phrases minimum au lieu d'étoiles/prix) ───────
+    // customText contient le résumé de l'article transmis
+    const descText = customText?.trim() || "Découvrez l'intégralité de notre dossier et nos conseils sur le blog Kukasoko.";
+    ctx.font = `400 ${Math.round(24 * S)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    const descLines = wrap(ctx, descText, innerW, 4); // Permet jusqu'à 4 lignes de texte
+    const descLineH = Math.round(32 * S);
+    descLines.forEach((ln, i) => {
+      ctx.fillText(ln, innerX, curY + i * descLineH);
+    });
+    curY += descLines.length * descLineH + Math.round(34 * S);
 
-  // ── Étoiles + note ────────────────────────────────────────────────────────
-  const starSz = Math.round(30 * S);
-  for (let i = 0; i < 5; i++) {
-    ctx.fillStyle = i < Math.floor(data.rating) ? accentColor : "rgba(255,255,255,0.22)";
-    ctx.font = `${starSz}px sans-serif`;
+    // Ligne séparateur
+    ctx.beginPath();
+    ctx.moveTo(innerX, curY);
+    ctx.lineTo(px + pw - PAD, curY);
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = Math.max(1, S);
+    ctx.stroke();
+    curY += Math.round(28 * S);
+
+    // Bouton de lecture CTA
+    const btnH = Math.round(76 * S);
+    const btnW2 = pw - PAD * 2;
+    const btnY = curY;
+    rr(ctx, innerX, btnY, btnW2, btnH, Math.round(12 * S));
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+
+    ctx.font = `700 ${Math.round(26 * S)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = "#000";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("📖  Lire l'article sur KUKASOKO", innerX + btnW2 / 2, btnY + btnH / 2);
+    ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("★", innerX + i * (starSz + 5), curY);
+    curY += btnH + Math.round(22 * S);
+
+  } else {
+    // ── Étoiles + note (Annonce E-commerce) ──────────────────────────────────
+    const starSz = Math.round(30 * S);
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i < Math.floor(data.rating) ? accentColor : "rgba(255,255,255,0.22)";
+      ctx.font = `${starSz}px sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.fillText("★", innerX + i * (starSz + 5), curY);
+    }
+    ctx.font = `600 ${Math.round(24 * S)}px Inter, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.80)";
+    ctx.fillText(
+      `  ${data.rating.toFixed(1)} · ${data.reviewCount} avis`,
+      innerX + 5 * (starSz + 5),
+      curY + 3
+    );
+    curY += starSz + Math.round(30 * S);
+
+    // Ligne séparateur
+    ctx.beginPath();
+    ctx.moveTo(innerX, curY);
+    ctx.lineTo(px + pw - PAD, curY);
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = Math.max(1, S);
+    ctx.stroke();
+    curY += Math.round(28 * S);
+
+    // ── PRIX ──────────────────────────────────────────────────────────────────
+    ctx.font = `400 ${Math.round(22 * S)}px Inter, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.48)";
+    ctx.textBaseline = "top";
+    ctx.fillText("Prix annoncé", innerX, curY);
+    curY += Math.round(26 * S);
+
+    ctx.font = `900 ${Math.round(80 * S)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(data.price, innerX, curY);
+    curY += Math.round(84 * S) + Math.round(28 * S);
+
+    // ── Bouton CTA ────────────────────────────────────────────────────────────
+    const btnH = Math.round(76 * S);
+    const btnW2 = pw - PAD * 2;
+    const btnY = curY;
+    rr(ctx, innerX, btnY, btnW2, btnH, Math.round(12 * S));
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+
+    ctx.font = `700 ${Math.round(28 * S)}px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("📅  Réserver maintenant", innerX + btnW2 / 2, btnY + btnH / 2);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    curY += btnH + Math.round(22 * S);
   }
-  ctx.font = `600 ${Math.round(24 * S)}px Inter, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.80)";
-  ctx.fillText(
-    `  ${data.rating.toFixed(1)} · ${data.reviewCount} avis`,
-    innerX + 5 * (starSz + 5),
-    curY + 3
-  );
-  curY += starSz + Math.round(30 * S);
-
-  // ── Ligne séparateur ─────────────────────────────────────────────────────
-  ctx.beginPath();
-  ctx.moveTo(innerX, curY);
-  ctx.lineTo(px + pw - PAD, curY);
-  ctx.strokeStyle = "rgba(255,255,255,0.10)";
-  ctx.lineWidth = Math.max(1, S);
-  ctx.stroke();
-  curY += Math.round(28 * S);
-
-  // ── PRIX ──────────────────────────────────────────────────────────────────
-  ctx.font = `400 ${Math.round(22 * S)}px Inter, sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.48)";
-  ctx.textBaseline = "top";
-  ctx.fillText("Prix annoncé", innerX, curY);
-  curY += Math.round(26 * S);
-
-  ctx.font = `900 ${Math.round(80 * S)}px Inter, system-ui, sans-serif`;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(data.price, innerX, curY);
-  curY += Math.round(84 * S) + Math.round(28 * S);
-
-  // ── Bouton CTA ────────────────────────────────────────────────────────────
-  const btnH = Math.round(76 * S);
-  const btnW2 = pw - PAD * 2;
-  const btnY = curY;
-  rr(ctx, innerX, btnY, btnW2, btnH, Math.round(12 * S));
-  ctx.fillStyle = accentColor;
-  ctx.fill();
-
-  ctx.font = `700 ${Math.round(28 * S)}px Inter, system-ui, sans-serif`;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("📅  Réserver maintenant", innerX + btnW2 / 2, btnY + btnH / 2);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  curY += btnH + Math.round(22 * S);
 
   // ── Footer ────────────────────────────────────────────────────────────────
   ctx.font = `400 ${Math.round(18 * S)}px Inter, sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.32)";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.fillText("✔ Paiement sécurisé  •  Service de qualité  •  KoraChannel", px + pw / 2, curY);
+  ctx.fillText("✔ Paiement sécurisé  •  Service de qualité  •  KUKASOKO", px + pw / 2, curY);
   ctx.textAlign = "left";
 }

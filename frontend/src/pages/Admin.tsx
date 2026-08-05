@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { usersAPI, mediaAPI, listingsAPI, API_BASE } from "@/services/api";
 import { Copy, FolderOpen, HardDrive, Database } from "lucide-react";
 
-type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau" | "categories";
+type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau" | "categories" | "blog";
 
 type CategoryItem = {
   id: number;
@@ -384,6 +384,97 @@ const Admin = () => {
   const [editChatKw, setEditChatKw] = useState("");
   const [editChatResp, setEditChatResp] = useState("");
 
+  /* ─── BLOG ADMIN MANAGEMENT ─── */
+  const [blogPostsState, setBlogPostsState] = useState<any[]>([]);
+  const [editPostId, setEditPostId] = useState<number | null>(null);
+  const [postTitle, setPostTitle] = useState("");
+  const [postExcerpt, setPostExcerpt] = useState("");
+  const [postCategory, setPostCategory] = useState("Guide");
+  const [postImage, setPostImage] = useState("");
+  const [postContent, setPostContent] = useState("");
+  const [postTags, setPostTags] = useState("");
+
+  // Charger les articles de blog depuis localStorage (avec fallback statique)
+  const fetchBlogPosts = () => {
+    const stored = localStorage.getItem("kukasoko-blog-posts");
+    if (stored) {
+      setBlogPostsState(JSON.parse(stored));
+    } else {
+      // Importer et initialiser
+      import("@/data/blogPosts").then(({ blogPosts }) => {
+        setBlogPostsState(blogPosts);
+        localStorage.setItem("kukasoko-blog-posts", JSON.stringify(blogPosts));
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogPosts();
+  }, []);
+
+  const handleSaveBlogPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!postTitle || !postExcerpt || !postContent) {
+      toast({ title: "Erreur", description: "Veuillez remplir le titre, le résumé et le contenu.", variant: "destructive" });
+      return;
+    }
+
+    let updated;
+    if (editPostId !== null) {
+      // Edition
+      updated = blogPostsState.map((p) => {
+        if (p.id === editPostId) {
+          return {
+            ...p,
+            title: postTitle,
+            excerpt: postExcerpt,
+            category: postCategory,
+            image: postImage || "/category-services.jpg",
+            content: postContent,
+            tags: postTags ? postTags.split(",").map(t => t.trim()).filter(Boolean) : p.tags
+          };
+        }
+        return p;
+      });
+      toast({ title: "Article de blog modifié ✅" });
+    } else {
+      // Création
+      const newPost = {
+        id: Date.now(),
+        title: postTitle,
+        excerpt: postExcerpt,
+        date: new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }),
+        image: postImage || "/category-services.jpg",
+        category: postCategory,
+        tags: postTags ? postTags.split(",").map(t => t.trim()).filter(Boolean) : ["Nouveau"],
+        content: postContent,
+        comments: []
+      };
+      updated = [newPost, ...blogPostsState];
+      toast({ title: "Article de blog créé ✅" });
+    }
+
+    setBlogPostsState(updated);
+    localStorage.setItem("kukasoko-blog-posts", JSON.stringify(updated));
+    // Réinitialiser le formulaire
+    setEditPostId(null);
+    setPostTitle("");
+    setPostExcerpt("");
+    setPostCategory("Guide");
+    setPostImage("");
+    setPostContent("");
+    setPostTags("");
+  };
+
+  const handleDeleteBlogPost = (id: number) => {
+    ask("Supprimer définitivement cet article de blog ?", () => {
+      const updated = blogPostsState.filter((p) => p.id !== id);
+      setBlogPostsState(updated);
+      localStorage.setItem("kukasoko-blog-posts", JSON.stringify(updated));
+      toast({ title: "Article supprimé 🗑️" });
+    });
+  };
+
   /* ─── Médiathèque réelle (connectée backend) ─── */
   type MediaFile = {
     id: number;
@@ -557,7 +648,7 @@ const Admin = () => {
               <div className="flex flex-col gap-2 pt-2">
                 <Button
                   onClick={() => {
-                    localStorage.removeItem("isoko_token");
+                    localStorage.removeItem("kukasoko_token");
                     window.location.reload();
                   }}
                   className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
@@ -641,6 +732,7 @@ const Admin = () => {
     { id: "signalements", label: "Signalements", icon: <Flag className="w-4 h-4" /> },
     { id: "chatbot", label: "Chatbot IA", icon: <MessageSquare className="w-4 h-4" /> },
     { id: "bandeau", label: "Bandeau Info", icon: <Radio className="w-4 h-4" /> },
+    { id: "blog", label: "Articles Blog", icon: <Pencil className="w-4 h-4" /> },
     { id: "medias", label: "Médiathèque", icon: <ImageIcon className="w-4 h-4" /> },
     { id: "personnalisation", label: "Personnalisation", icon: <Palette className="w-4 h-4" /> },
   ];
@@ -1005,14 +1097,14 @@ const Admin = () => {
                         const newUser = {
                           id: newId,
                           name: "Nouvel Utilisateur",
-                          email: "user@isoko.com",
+                          email: "user@kukasoko.com",
                           role: "Acheteur",
                           status: "Actif",
                           date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
                         };
                         setUsers([newUser, ...users]);
                         setEditUserId(newId);
-                        setEditUserData({ name: "Nouvel Utilisateur", email: "user@isoko.com", role: "Acheteur", avatar: "" });
+                        setEditUserData({ name: "Nouvel Utilisateur", email: "user@kukasoko.com", role: "Acheteur", avatar: "" });
                       }}>
                         <Plus className="w-3.5 h-3.5" /> Ajouter
                       </Button>
@@ -1186,9 +1278,62 @@ const Admin = () => {
               {/* ─── CHATBOT ─── */}
               {activeTab === "chatbot" && (
                 <div className="space-y-4">
+
+                  {/* ── Statut Base de Connaissance IA ── */}
+                  <div className="bg-gradient-to-br from-amber-500/10 to-emerald-600/10 border border-accent/30 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center text-xl">🧠</div>
+                        <div>
+                          <h3 className="font-bold text-foreground text-sm">Base de Connaissance IA</h3>
+                          <p className="text-xs text-muted-foreground">Données réelles indexées pour le chatbot</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs"
+                        onClick={async () => {
+                          const { KukasokoBrain } = await import("@/services/KukasokoBrainService");
+                          await KukasokoBrain.forceRefresh();
+                          const s = KukasokoBrain.getStats();
+                          toast({ title: "Base mise à jour ✅", description: `${s.listings} annonces · ${s.shops} boutiques · ${s.blogs} articles indexés` });
+                        }}
+                      >
+                        🔄 Mettre à jour la base
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: "Annonces", icon: "🛒", color: "text-blue-500", key: "listings" },
+                        { label: "Boutiques", icon: "🏪", color: "text-emerald-500", key: "shops" },
+                        { label: "Articles", icon: "📰", color: "text-purple-500", key: "blogs" },
+                        { label: "Catégories", icon: "📂", color: "text-amber-500", key: "categories" },
+                      ].map(({ label, icon, color, key }) => (
+                        <div key={key} className="bg-background rounded-xl p-3 text-center border border-border/60">
+                          <p className="text-xl mb-1">{icon}</p>
+                          <p className={`text-lg font-bold ${color}`}>—</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 p-3 bg-background/60 rounded-lg border border-border/50">
+                      <p className="text-xs text-muted-foreground">
+                        💡 <strong>Comment ça fonctionne ?</strong> Le chatbot charge automatiquement toutes vos annonces, boutiques et articles au démarrage.
+                        Il utilise un algorithme <strong>BM25</strong> (recherche par pertinence) pour trouver les meilleures réponses.
+                        Cliquez "Mettre à jour" pour forcer un rechargement immédiat des données.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* ── FAQ Manuelles (complément) ── */}
                   <div className="bg-card rounded-xl border border-border p-6">
-                    <h3 className="font-semibold text-foreground mb-1">Configuration du Chatbot</h3>
-                    <p className="text-xs text-muted-foreground mb-4">Ajoutez, modifiez ou supprimez les réponses automatiques du chatbot.</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground">Réponses FAQ personnalisées</h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-semibold">Complément IA</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Ces réponses s'ajoutent à l'IA. Utilisées en priorité sur les mots-clés configurés.
+                    </p>
                     <div className="space-y-3">
                       {chatbotData.map((item, idx) => (
                         <div key={idx} className="bg-secondary/50 rounded-xl p-4">
@@ -1237,11 +1382,12 @@ const Admin = () => {
                       setChatbotData([...chatbotData, { keyword: "nouveau", response: "Nouvelle réponse à configurer" }]);
                       setEditChatIdx(idx); setEditChatKw("nouveau"); setEditChatResp("Nouvelle réponse à configurer");
                     }}>
-                      <Plus className="w-4 h-4" /> Ajouter une réponse
+                      <Plus className="w-4 h-4" /> Ajouter une réponse FAQ
                     </Button>
                   </div>
                 </div>
               )}
+
 
               {/* ─── MÉDIATHÈQUE ─── */}
               {activeTab === "medias" && (
@@ -2182,6 +2328,174 @@ const Admin = () => {
                 </div>
               )}
 
+              {/* ─── GESTION DU BLOG ADMIN ─── */}
+              {activeTab === "blog" && (
+                <div className="space-y-6">
+                  {/* Formulaire de création / modification */}
+                  <div className="bg-card rounded-xl border border-border p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <Pencil className="w-4 h-4 text-accent" />
+                      </div>
+                      <div>
+                        <h2 className="font-semibold text-foreground">
+                          {editPostId !== null ? "Modifier l'article de blog" : "Rédiger un nouvel article"}
+                        </h2>
+                        <p className="text-xs text-muted-foreground">Publiez des actualités ou des conseils sur Kukasoko</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleSaveBlogPost} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="blog-title" className="text-xs font-semibold text-muted-foreground uppercase">Titre de l'article *</label>
+                          <input
+                            id="blog-title"
+                            type="text"
+                            value={postTitle}
+                            onChange={(e) => setPostTitle(e.target.value)}
+                            placeholder="Ex : 5 astuces pour vendre rapidement"
+                            className="w-full mt-1.5 h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="blog-category" className="text-xs font-semibold text-muted-foreground uppercase">Catégorie</label>
+                          <select
+                            id="blog-category"
+                            value={postCategory}
+                            onChange={(e) => setPostCategory(e.target.value)}
+                            className="w-full mt-1.5 h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                          >
+                            <option value="Guide">Guide</option>
+                            <option value="Conseils">Conseils</option>
+                            <option value="Immobilier">Immobilier</option>
+                            <option value="Actualités">Actualités</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="blog-excerpt" className="text-xs font-semibold text-muted-foreground uppercase">Résumé de l'article * (2-3 phrases max)</label>
+                        <textarea
+                          id="blog-excerpt"
+                          value={postExcerpt}
+                          onChange={(e) => setPostExcerpt(e.target.value)}
+                          placeholder="Un résumé court accrocheur qui sera dessiné sur l'image et servira d'aperçu..."
+                          rows={2}
+                          className="w-full mt-1.5 p-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="blog-content" className="text-xs font-semibold text-muted-foreground uppercase">Contenu complet *</label>
+                        <textarea
+                          id="blog-content"
+                          value={postContent}
+                          onChange={(e) => setPostContent(e.target.value)}
+                          placeholder="Écrivez le corps de votre article de blog ici..."
+                          rows={8}
+                          className="w-full mt-1.5 p-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <ImageBox
+                            label="Image de couverture de l'article"
+                            src={postImage}
+                            onUpload={(url) => setPostImage(url)}
+                            onDelete={() => setPostImage("")}
+                            coverRatio={true}
+                            category="blog"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="blog-tags" className="text-xs font-semibold text-muted-foreground uppercase">Mots-clés (séparés par des virgules)</label>
+                          <input
+                            id="blog-tags"
+                            type="text"
+                            value={postTags}
+                            onChange={(e) => setPostTags(e.target.value)}
+                            placeholder="Ex : Vente, Conseils, Boutique"
+                            className="w-full mt-1.5 h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 justify-end pt-2">
+                        {editPostId !== null && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setEditPostId(null);
+                              setPostTitle("");
+                              setPostExcerpt("");
+                              setPostCategory("Guide");
+                              setPostImage("");
+                              setPostContent("");
+                              setPostTags("");
+                            }}
+                          >
+                            Annuler
+                          </Button>
+                        )}
+                        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                          {editPostId !== null ? "Sauvegarder l'article" : "Publier l'article"}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Liste des articles */}
+                  <div className="bg-card rounded-xl border border-border p-6">
+                    <h3 className="text-sm font-semibold text-foreground mb-4">Articles publiés ({blogPostsState.length})</h3>
+                    <div className="space-y-4">
+                      {blogPostsState.map((p) => (
+                        <div key={p.id} className="flex gap-4 p-4 border border-border/60 bg-secondary/10 rounded-xl items-start">
+                          <img
+                            src={p.image}
+                            alt={p.title}
+                            className="w-20 h-20 rounded-lg object-cover bg-muted shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className="text-[10px]">{p.category}</Badge>
+                              <span className="text-[10px] text-muted-foreground">{p.date}</span>
+                            </div>
+                            <h4 className="font-semibold text-sm text-foreground truncate">{p.title}</h4>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{p.excerpt}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => {
+                                setEditPostId(p.id);
+                                setPostTitle(p.title);
+                                setPostExcerpt(p.excerpt);
+                                setPostCategory(p.category);
+                                setPostImage(p.image);
+                                setPostContent(p.content);
+                                setPostTags(p.tags ? p.tags.join(", ") : "");
+                              }}
+                              className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/85"
+                              title="Modifier"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBlogPost(p.id)}
+                              className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2192,3 +2506,4 @@ const Admin = () => {
 };
 
 export default Admin;
+

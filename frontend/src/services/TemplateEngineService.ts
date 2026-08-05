@@ -1,4 +1,4 @@
-export interface ListingTemplateData {
+﻿export interface ListingTemplateData {
   id: number;
   title: string;
   category: string;
@@ -89,9 +89,9 @@ export const SOCIAL_CHANNELS: Record<string, SocialChannelConfig> = {
  */
 export function generateListingXML(data: ListingTemplateData): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<korachannel_listing id="${data.id}" generated_at="${new Date().toISOString()}">
+<KUKASOKO_listing id="${data.id}" generated_at="${new Date().toISOString()}">
   <meta>
-    <platform>KoraChannel — Studio Kora</platform>
+    <platform>KUKASOKO — Studio de Publication Kukasoko</platform>
     <version>2.0</version>
     <url>${data.url}</url>
   </meta>
@@ -110,7 +110,7 @@ export function generateListingXML(data: ListingTemplateData): string {
     </specifications>
   </product>
   <seller>
-    <name><![CDATA[${data.sellerName || 'Vendeur KoraChannel'}]]></name>
+    <name><![CDATA[${data.sellerName || 'Vendeur Kukasoko'}]]></name>
     <phone>${data.sellerPhone || ''}</phone>
   </seller>
   <social_exports>
@@ -118,24 +118,24 @@ export function generateListingXML(data: ListingTemplateData): string {
     <story_aspect>9:16 (1080x1920)</story_aspect>
     <facebook_aspect>1.91:1 (1200x630)</facebook_aspect>
   </social_exports>
-</korachannel_listing>`;
+</KUKASOKO_listing>`;
 }
 
 /**
  * Génère les textes d'accompagnement optimisés par réseau social
  */
 export function generateSocialCaptions(data: ListingTemplateData): Record<string, string> {
-  const hashtags = `#KoraChannel #${data.category.replace(/\s+/g, '')} #AchatVenteBurundi #Bujumbura #Marketplace`;
+  const hashtags = `#Kukasoko #${data.category.replace(/\s+/g, '')} #AchatVenteBurundi #Bujumbura #Marketplace`;
   
   return {
     whatsapp: `🛙 *${data.title}*\n\n💰 *Prix:* ${data.price}\n⭐ *Note:* ${data.rating}/5 (${data.reviewCount} avis)\n📍 *Lieu:* ${data.location || 'Bujumbura'}\n\n👉 *Découvrez l’annonce complète ici :*\n${data.url}`,
     
-    instagram: `✨ ${data.title} ✨\n\n📌 Catégorie : ${data.category}\n💵 Prix : ${data.price}\n⭐ Note clients : ${data.rating}/5\n${data.availability ? `⏱ Disponibilité : ${data.availability}\n` : ''}${data.guarantee ? `🛡 Garantie : ${data.guarantee}\n` : ''}\n🔗 Lien direct disponible en bio ou sur KoraChannel !\n\n${hashtags}`,
+    instagram: `✨ ${data.title} ✨\n\n📌 Catégorie : ${data.category}\n💵 Prix : ${data.price}\n⭐ Note clients : ${data.rating}/5\n${data.availability ? `⏱ Disponibilité : ${data.availability}\n` : ''}${data.guarantee ? `🛡 Garantie : ${data.guarantee}\n` : ''}\n🔗 Lien direct disponible en bio ou sur KUKASOKO !\n\n${hashtags}`,
     
-    facebook: `📢 NOUVEAUTÉ SUR KORACHANNEL !\n\n${data.title}\n\n🏷 Catégorie : ${data.category}\n💰 Prix : ${data.price}\n⭐ Évalué ${data.rating}/5 (${data.reviewCount} avis)\n\n📍 Disponible dès maintenant sur KoraChannel :\n👉 ${data.url}\n\n${hashtags}`,
+    facebook: `📢 NOUVEAUTÉ SUR KUKASOKO !\n\n${data.title}\n\n🏷 Catégorie : ${data.category}\n💰 Prix : ${data.price}\n⭐ Évalué ${data.rating}/5 (${data.reviewCount} avis)\n\n📍 Disponible dès maintenant sur KUKASOKO :\n👉 ${data.url}\n\n${hashtags}`,
     
-    linkedin: `[KoraChannel Studio] Offre de service / Produit disponible\n\n${data.title}\nCatégorie : ${data.category}\nModalités : ${data.price}\nCertification vendeur : ${data.isVerified ? 'Vérifié ✅' : 'Standard'}\n\nPour en savoir plus ou contacter le prestataire :\n👉 ${data.url}`,
+    linkedin: `[KUKASOKO Studio] Offre de service / Produit disponible\n\n${data.title}\nCatégorie : ${data.category}\nModalités : ${data.price}\nCertification vendeur : ${data.isVerified ? 'Vérifié ✅' : 'Standard'}\n\nPour en savoir plus ou contacter le prestataire :\n👉 ${data.url}`,
     
-    twitter: `🔥 Découvrez sur KoraChannel : ${data.title} (${data.price})\n⭐ ${data.rating}/5\n\n👉 Voir l’annonce : ${data.url}\n\n${hashtags}`,
+    twitter: `🔥 Découvrez sur KUKASOKO : ${data.title} (${data.price})\n⭐ ${data.rating}/5\n\n👉 Voir l’annonce : ${data.url}\n\n${hashtags}`,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Send, MapPin, Paperclip, Search, MessageCircle, Loader2, Navigation, X } from "lucide-react";
@@ -582,7 +582,7 @@ const Messages = () => {
                       <MessageCircle className="w-8 h-8" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground text-lg mb-1">Isoko Chat</h3>
+                      <h3 className="font-bold text-foreground text-lg mb-1">Kukasoko Chat</h3>
                       <p className="text-xs text-muted-foreground">
                         Vous n'avez pas encore de conversation active. Parcourez les annonces pour contacter un vendeur.
                       </p>

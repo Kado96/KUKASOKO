@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+﻿import { useEffect, useRef, useCallback } from "react";
 
 const WS_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000")
   .replace(/^http/, "ws");
@@ -15,7 +15,7 @@ export function useChatWebSocket(
 
   useEffect(() => {
     if (!userId) return;
-    const token = localStorage.getItem("isoko_token");
+    const token = localStorage.getItem("kukasoko_token");
     if (!token) return;
 
     const ws = new WebSocket(`${WS_BASE}/ws/chat/${userId}?token=${token}`);
@@ -61,7 +61,7 @@ export function useDriverTracking(sessionId: number | null, active: boolean) {
       return;
     }
 
-    const token = localStorage.getItem("isoko_token");
+    const token = localStorage.getItem("kukasoko_token");
     if (!token) return;
 
     const ws = new WebSocket(
@@ -102,7 +102,7 @@ export function useDeliveryTracking(
 ) {
   useEffect(() => {
     if (!sessionId) return;
-    const token = localStorage.getItem("isoko_token");
+    const token = localStorage.getItem("kukasoko_token");
     if (!token) return;
 
     const ws = new WebSocket(

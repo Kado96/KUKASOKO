@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+﻿import React, { createContext, useContext, useState } from "react";
 
 export interface TickerMessage {
   id: number;
@@ -25,7 +25,7 @@ const NewsTickerContext = createContext<NewsTickerContextType | undefined>(undef
 const INIT_MESSAGES: TickerMessage[] = [
   {
     id: 1,
-    text: "Bienvenue sur ISOKO — La plateforme de petites annonces du Congo",
+    text: "Bienvenue sur Kukasoko — La plateforme de petites annonces du Congo",
     paid: false,
     active: true,
     createdAt: new Date().toISOString(),

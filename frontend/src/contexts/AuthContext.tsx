@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+﻿import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authAPI, usersAPI, messagesAPI } from "@/services/api";
 
 interface User {
@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem("isoko_token"));
+  const [token, setToken] = useState<string | null>(localStorage.getItem("kukasoko_token"));
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .me()
         .then((res) => setUser(res.data))
         .catch(() => {
-          localStorage.removeItem("isoko_token");
+          localStorage.removeItem("kukasoko_token");
           setToken(null);
         })
         .finally(() => setLoading(false));
@@ -123,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await authAPI.login(email, password);
     const { access_token } = res.data;
-    localStorage.setItem("isoko_token", access_token);
+    localStorage.setItem("kukasoko_token", access_token);
     setToken(access_token);
     const me = await usersAPI.me();
     setUser(me.data);
@@ -139,14 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithProvider = useCallback(async (email: string, name: string, provider: string, token: string) => {
     const res = await authAPI.socialLogin(email, name, provider, token);
     const { access_token } = res.data;
-    localStorage.setItem("isoko_token", access_token);
+    localStorage.setItem("kukasoko_token", access_token);
     setToken(access_token);
     const me = await usersAPI.me();
     setUser(me.data);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("isoko_token");
+    localStorage.removeItem("kukasoko_token");
     setToken(null);
     setUser(null);
     window.location.href = "/";

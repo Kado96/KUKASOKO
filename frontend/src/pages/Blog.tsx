@@ -1,10 +1,24 @@
-import Navbar from "@/components/Navbar";
+﻿import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { blogPosts } from "@/data/blogPosts";
 
+import { useState, useEffect } from "react";
+
 const Blog = () => {
+  const [posts, setPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("kukasoko-blog-posts");
+    if (stored) {
+      setPosts(JSON.parse(stored));
+    } else {
+      setPosts(blogPosts);
+      localStorage.setItem("kukasoko-blog-posts", JSON.stringify(blogPosts));
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -12,13 +26,13 @@ const Blog = () => {
         <div className="bg-primary py-12">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-3xl font-display font-bold text-primary-foreground mb-2">Blog</h1>
-            <p className="text-primary-foreground/70">Actualités, conseils et guides pour bien utiliser Isoko</p>
+            <p className="text-primary-foreground/70">Actualités, conseils et guides pour bien utiliser KUKASOKO</p>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.map((post) => (
+            {posts.map((post) => (
               <Link to={`/blog/${post.id}`} key={post.id} className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer group flex flex-col">
                 <div className="aspect-[16/10] overflow-hidden">
                   <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
@@ -40,6 +54,7 @@ const Blog = () => {
               </Link>
             ))}
           </div>
+
         </div>
       </main>
       <Footer />

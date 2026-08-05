@@ -1,4 +1,4 @@
-import Navbar from "@/components/Navbar";
+﻿import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useParams, Link } from "react-router-dom";
 import { Clock, ChevronLeft, ChevronRight, Share2, MessageCircle, Tag } from "lucide-react";
@@ -11,12 +11,24 @@ import { TemplateStudioModal } from "@/components/TemplateStudioModal";
 
 const BlogDetail = () => {
   const { id } = useParams();
-  const post = blogPosts.find((p) => p.id === Number(id));
   const commentFormRef = useRef<HTMLDivElement>(null);
 
   const [commentForm, setCommentForm] = useState({ name: "", email: "", website: "", comment: "", save: false });
   const [showStudioModal, setShowStudioModal] = useState(false);
   const [dynamicComments, setDynamicComments] = useState<any[]>([]);
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("kukasoko-blog-posts");
+    if (stored) {
+      setAllPosts(JSON.parse(stored));
+    } else {
+      setAllPosts(blogPosts);
+      localStorage.setItem("kukasoko-blog-posts", JSON.stringify(blogPosts));
+    }
+  }, [id]);
+
+  const post = allPosts.find((p) => p.id === Number(id));
 
   // Charger les commentaires spécifiques à cet article depuis localStorage
   useEffect(() => {
@@ -26,7 +38,7 @@ const BlogDetail = () => {
     if (stored) {
       setDynamicComments(JSON.parse(stored));
     } else {
-      setDynamicComments(post.comments);
+      setDynamicComments(post.comments || []);
     }
   }, [post]);
 
@@ -45,8 +57,8 @@ const BlogDetail = () => {
     );
   }
 
-  const currentIndex = blogPosts.findIndex((p) => p.id === post.id);
-  const prevPost = currentIndex > 0 ? blogPosts[currentIndex - 1] : null;
+  const currentIndex = allPosts.findIndex((p) => p.id === post.id);
+  const prevPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +118,7 @@ const BlogDetail = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center text-white text-xs font-bold">I</div>
                   <div>
-                    <p className="text-white text-sm font-medium">Isoko Online</p>
+                    <p className="text-white text-sm font-medium">Kukasoko Online</p>
                     <p className="text-white/50 text-xs uppercase tracking-wider">Rédaction</p>
                   </div>
                 </div>
@@ -150,7 +162,7 @@ const BlogDetail = () => {
                     size="sm"
                     className="gap-2 text-xs border-accent text-accent hover:bg-accent hover:text-accent-foreground font-semibold"
                   >
-                    <Share2 className="w-3.5 h-3.5" /> Partager (KoraChannel)
+                    <Share2 className="w-3.5 h-3.5" /> Partager (KUKASOKO)
                   </Button>
                   <Button
                     onClick={handleCommentClick}
@@ -287,11 +299,12 @@ const BlogDetail = () => {
       </main>
       <Footer />
 
-      {/* Modal KoraChannel dédié aux articles de blog */}
+      {/* Modal KUKASOKO dédié aux articles de blog */}
       {showStudioModal && (
         <TemplateStudioModal
           isOpen={showStudioModal}
           onClose={() => setShowStudioModal(false)}
+          isBlog={true}
           listing={{
             id: post.id,
             title: post.title,
@@ -302,7 +315,7 @@ const BlogDetail = () => {
             reviewCount: dynamicComments.length,
             isVerified: true,
             availability: "Disponible",
-            guarantee: "Isoko Blog"
+            guarantee: "Kukasoko Blog"
           }}
         />
       )}

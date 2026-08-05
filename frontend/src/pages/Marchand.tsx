@@ -82,12 +82,12 @@ export default function MarchandPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
       {/* Banner */}
-      <div className="relative h-48 rounded-2xl overflow-hidden bg-gradient-to-r from-green-600 to-emerald-500 mb-6">
+      <div className="relative h-44 sm:h-52 md:h-64 lg:h-72 rounded-2xl overflow-hidden bg-gradient-to-r from-green-600 to-emerald-500 mb-6">
         {merchant.banner_url && (
           <img
             src={merchant.banner_url}
             alt="Bannière"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
           />
         )}
         {/* Logo */}

@@ -1,16 +1,72 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import { ListingTemplateData } from "@/services/TemplateEngineService";
-import { Star } from "lucide-react";
 
 interface ListingCardCanvasProps {
   data: ListingTemplateData;
   width?: number;
   height?: number;
-  /** Taille d’affichage CSS (le canvas est rendu en pleine résolution HD mais affiché en plus petit) */
+  /** Taille d'affichage CSS (rendu HD natif, affiché en petit) */
   displayWidth?: number;
   displayHeight?: number;
+  /** Couleur accent (hex) — modifiable par l'utilisateur */
+  accentColor?: string;
+  /** Texte personnalisé à afficher sur la photo */
+  customText?: string;
   className?: string;
   onRendered?: (dataUrl: string) => void;
+}
+
+/** Dessine un rectangle arrondi compatible tous navigateurs */
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number
+) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
+}
+
+/** Coupe un texte pour qu'il rentre dans maxWidth */
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 0 && ctx.measureText(t + "…").width > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return t + "…";
+}
+
+/** Word-wrap : retourne max maxLines lignes */
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines = 2
+): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+      if (lines.length >= maxLines) break;
+    } else {
+      line = test;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  return lines;
 }
 
 export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
@@ -19,14 +75,14 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
   height = 1080,
   displayWidth,
   displayHeight,
+  accentColor = "#F59E0B",
+  customText,
   className = "",
   onRendered,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
   const onRenderedRef = useRef(onRendered);
 
-  // Garder la référence à jour sans déclencher d'effet
   useEffect(() => {
     onRenderedRef.current = onRendered;
   }, [onRendered]);
@@ -37,236 +93,286 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear
     ctx.clearRect(0, 0, width, height);
-    // Activer le lissage haute qualité pour des photos nettes (comme Instagram)
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Draw background rounded card
-    const padding = Math.round(width * 0.03);
-    const cardX = padding;
-    const cardY = padding;
-    const cardW = width - padding * 2;
-    const cardH = height - padding * 2;
-    const radius = Math.round(width * 0.04);
+    const W = width;
+    const H = height;
+    const scale = W / 1080;
 
-    // Card background fill & shadow
-    ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.08)";
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetY = 8;
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, radius);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fill();
-    ctx.restore();
-
-    // Card Border
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, radius);
-    ctx.strokeStyle = "#E5E7EB";
-    ctx.lineWidth = Math.max(1, Math.round(width * 0.003));
-    ctx.stroke();
-
-    // Image section height (58% of card height)
-    const imgHeight = Math.round(cardH * 0.58);
-    const imgRadius = Math.round(radius * 0.8);
-
-    // Load and draw image
+    // ── Load product image ────────────────────────────────────────────────────
     const img = new Image();
     img.crossOrigin = "anonymous";
-    
-    // Éviter le cache du navigateur qui conserve l'image sans les en-têtes CORS
-    if (data.image && (data.image.startsWith("http://") || data.image.startsWith("https://"))) {
-      img.src = data.image.includes("?") ? `${data.image}&cors=1` : `${data.image}?cors=1`;
-    } else {
-      img.src = data.image;
-    }
+    const src = data.image || "";
+    img.src = src.startsWith("http") ? (src.includes("?") ? `${src}&t=1` : `${src}?t=1`) : src;
 
-    const renderCardContent = () => {
-      // 1. Draw image container with top rounded corners
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(cardX + 2, cardY + 2, cardW - 4, imgHeight, [imgRadius, imgRadius, 0, 0]);
-      ctx.clip();
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
-      if (img.complete && img.naturalWidth !== 0) {
-        // Draw image cover style
-        const imgRatio = img.naturalWidth / img.naturalHeight;
-        const targetRatio = (cardW - 4) / imgHeight;
-        let sWidth = img.naturalWidth;
-        let sHeight = img.naturalHeight;
-        let sX = 0;
-        let sY = 0;
-
-        if (imgRatio > targetRatio) {
-          sWidth = img.naturalHeight * targetRatio;
-          sX = (img.naturalWidth - sWidth) / 2;
-        } else {
-          sHeight = img.naturalWidth / targetRatio;
-          sY = (img.naturalHeight - sHeight) / 2;
-        }
-
-        ctx.drawImage(img, sX, sY, sWidth, sHeight, cardX + 2, cardY + 2, cardW - 4, imgHeight);
+      // ── 1. FULL-BLEED BACKGROUND ─────────────────────────────────────────
+      if (img.complete && img.naturalWidth > 0) {
+        const ir = img.naturalWidth / img.naturalHeight;
+        const cr = W / H;
+        let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+        if (ir > cr) { sw = sh * cr; sx = (img.naturalWidth - sw) / 2; }
+        else { sh = sw / cr; sy = (img.naturalHeight - sh) / 2; }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
       } else {
-        // Fallback gradient background if image load fails
-        const grad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + imgHeight);
-        grad.addColorStop(0, "#E2E8F0");
-        grad.addColorStop(1, "#CBD5E1");
-        ctx.fillStyle = grad;
-        ctx.fillRect(cardX + 2, cardY + 2, cardW - 4, imgHeight);
+        // Fallback gradient
+        const g = ctx.createLinearGradient(0, 0, W, H);
+        g.addColorStop(0, "#1a1a2e");
+        g.addColorStop(1, "#0f0f1a");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
       }
-      ctx.restore();
 
-      // 2. Category Pill Badge (Yellow/Amber background like sample)
-      const pillX = cardX + Math.round(cardW * 0.04);
-      const pillY = cardY + Math.round(cardH * 0.035);
-      const pillH = Math.round(cardH * 0.06);
-      const fontSizePill = Math.max(11, Math.round(width * 0.026));
+      // ── 2. GRADIENT OVERLAYS ────────────────────────────────────────────
+      // Top vignette (for badge readability)
+      const topG = ctx.createLinearGradient(0, 0, 0, H * 0.38);
+      topG.addColorStop(0, "rgba(0,0,0,0.60)");
+      topG.addColorStop(1, "rgba(0,0,0,0.00)");
+      ctx.fillStyle = topG;
+      ctx.fillRect(0, 0, W, H * 0.38);
 
-      ctx.font = `600 ${fontSizePill}px Inter, system-ui, sans-serif`;
-      const textMetrics = ctx.measureText(data.category);
-      const pillW = textMetrics.width + Math.round(fontSizePill * 2);
+      // Bottom gradient (main text area)
+      const botG = ctx.createLinearGradient(0, H * 0.28, 0, H);
+      botG.addColorStop(0, "rgba(0,0,0,0.00)");
+      botG.addColorStop(0.42, "rgba(0,0,0,0.72)");
+      botG.addColorStop(1,   "rgba(0,0,0,0.97)");
+      ctx.fillStyle = botG;
+      ctx.fillRect(0, H * 0.28, W, H * 0.72);
 
+      const pad = Math.round(40 * scale);
+
+      // ── 3. TOP-LEFT : LOGO K + CATEGORY PILLS ───────────────────────────
+      const topY = Math.round(44 * scale);
+      const logoR = Math.round(26 * scale);
+
+      // Logo circle
       ctx.beginPath();
-      ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-      ctx.fillStyle = "#F59E0B"; // Bright amber/orange-yellow
+      ctx.arc(pad + logoR, topY + logoR, logoR, 0, Math.PI * 2);
+      ctx.fillStyle = accentColor;
       ctx.fill();
 
-      ctx.fillStyle = "#FFFFFF";
+      ctx.font = `bold ${Math.round(24 * scale)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(data.category, pillX + Math.round(fontSizePill), pillY + pillH / 2 + 1);
+      ctx.fillText("K", pad + logoR, topY + logoR + 1);
 
-      // 3. Content section below image
-      const contentY = cardY + imgHeight + Math.round(cardH * 0.04);
-      const contentLeft = cardX + Math.round(cardW * 0.05);
-      const contentWidth = cardW - Math.round(cardW * 0.1);
+      // Category pill (amber)
+      const pillH = Math.round(34 * scale);
+      const pillR2 = pillH / 2;
+      const cat1X = pad + logoR * 2 + Math.round(14 * scale);
+      const cat1Y = topY + logoR - pillH / 2;
+      ctx.font = `600 ${Math.round(15 * scale)}px Inter, system-ui, sans-serif`;
+      const cat1W = ctx.measureText(data.category).width + Math.round(26 * scale);
+      roundRect(ctx, cat1X, cat1Y, cat1W, pillH, pillR2);
+      ctx.fillStyle = accentColor;
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(data.category, cat1X + Math.round(13 * scale), cat1Y + pillH / 2);
 
-      // Title + Verified checkmark
-      const fontTitleSize = Math.max(14, Math.round(width * 0.035));
-      ctx.font = `bold ${fontTitleSize}px "Playfair Display", Georgia, serif`;
-      ctx.fillStyle = "#111827";
+      // Sub-cat pill (glass)
+      const cat2X = cat1X + cat1W + Math.round(8 * scale);
+      const subLabel = data.location || "Bujumbura";
+      ctx.font = `500 ${Math.round(14 * scale)}px Inter, system-ui, sans-serif`;
+      const cat2W = ctx.measureText(subLabel).width + Math.round(24 * scale);
+      roundRect(ctx, cat2X, cat1Y, cat2W, pillH, pillR2);
+      ctx.fillStyle = "rgba(255,255,255,0.20)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = Math.max(1, Math.round(1.5 * scale));
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(subLabel, cat2X + Math.round(12 * scale), cat1Y + pillH / 2);
       ctx.textBaseline = "top";
 
-      // Truncate title if too long
-      let titleText = data.title;
-      if (ctx.measureText(titleText).width > contentWidth - 30) {
-        while (titleText.length > 0 && ctx.measureText(titleText + "...").width > contentWidth - 30) {
-          titleText = titleText.slice(0, -1);
-        }
-        titleText += "...";
-      }
+      // ── 4. RIGHT-SIDE FEATURE PILLS ────────────────────────────────────
+      const features = [
+        { icon: "⏱", label: "Disponibilité", sub: data.availability || "Rapide" },
+        { icon: "🛡", label: "Garantie",      sub: data.guarantee   || "Complet" },
+        { icon: "📍", label: "Lieu",          sub: data.location    || "Bujumbura" },
+      ];
+      const fpW  = Math.round(210 * scale);
+      const fpH2 = Math.round(56 * scale);
+      const fpGap = Math.round(12 * scale);
+      const fpX  = W - pad - fpW;
+      const fpStartY = Math.round(160 * scale);
 
-      ctx.fillText(titleText, contentLeft, contentY);
+      features.forEach((f, i) => {
+        const fy = fpStartY + i * (fpH2 + fpGap);
+        roundRect(ctx, fpX, fy, fpW, fpH2, Math.round(10 * scale));
+        ctx.fillStyle = "rgba(0,0,0,0.52)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = Math.max(1, scale);
+        ctx.stroke();
 
-      // Draw Green Checkmark icon ✅ next to title
-      const titleWidth = ctx.measureText(titleText).width;
-      const checkX = contentLeft + titleWidth + 6;
-      const checkY = contentY + 2;
-      const checkSize = Math.round(fontTitleSize * 0.85);
+        ctx.font = `${Math.round(20 * scale)}px sans-serif`;
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(f.icon, fpX + Math.round(14 * scale), fy + fpH2 / 2);
 
-      ctx.beginPath();
-      ctx.arc(checkX + checkSize / 2, checkY + checkSize / 2, checkSize / 2, 0, Math.PI * 2);
-      ctx.fillStyle = "#10B981"; // Emerald green
+        ctx.font = `600 ${Math.round(14 * scale)}px Inter, system-ui, sans-serif`;
+        ctx.fillStyle = "#ffffff";
+        ctx.textBaseline = "top";
+        ctx.fillText(f.label, fpX + Math.round(44 * scale), fy + Math.round(10 * scale));
+
+        ctx.font = `${Math.round(12 * scale)}px Inter, system-ui, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.68)";
+        ctx.fillText(f.sub, fpX + Math.round(44 * scale), fy + Math.round(28 * scale));
+      });
+
+      // ── 5. VERIFIED BADGE ───────────────────────────────────────────────
+      const verifiedY = Math.round(H * 0.525);
+      const vH = Math.round(36 * scale);
+      const vLabel = "✔  PROFESSIONNEL VÉRIFIÉ";
+      ctx.font = `700 ${Math.round(13 * scale)}px Inter, system-ui, sans-serif`;
+      const vW = ctx.measureText(vLabel).width + Math.round(28 * scale);
+      roundRect(ctx, pad, verifiedY, vW, vH, vH / 2);
+      ctx.fillStyle = "rgba(16,185,129,0.88)";
       ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.textBaseline = "middle";
+      ctx.fillText(vLabel, pad + Math.round(14 * scale), verifiedY + vH / 2);
+      ctx.textBaseline = "top";
 
-      // White check mark inside green circle
-      ctx.beginPath();
-      ctx.moveTo(checkX + checkSize * 0.28, checkY + checkSize * 0.52);
-      ctx.lineTo(checkX + checkSize * 0.44, checkY + checkSize * 0.7);
-      ctx.lineTo(checkX + checkSize * 0.74, checkY + checkSize * 0.32);
-      ctx.strokeStyle = "#FFFFFF";
-      ctx.lineWidth = Math.max(1.5, checkSize * 0.15);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.stroke();
+      // ── 6. TITLE (word-wrapped, 2 lines max) ────────────────────────────
+      const titleSize = Math.round(54 * scale);
+      ctx.font = `800 ${titleSize}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      const titleY = verifiedY + vH + Math.round(18 * scale);
+      const titleLines = wrapText(ctx, data.title, W - pad * 2.5, 2);
+      titleLines.forEach((ln, i) => {
+        ctx.fillText(ln, pad, titleY + i * (titleSize + Math.round(6 * scale)));
+      });
 
-      // Date added line (uppercase gray text)
-      const fontDateSize = Math.max(9, Math.round(width * 0.022));
-      const dateY = contentY + fontTitleSize + Math.round(cardH * 0.025);
-      ctx.font = `600 ${fontDateSize}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = "#6B7280";
-      ctx.fillText(`AJOUTÉ LE ${data.date.toUpperCase()}`, contentLeft, dateY);
+      // ── 7. CUSTOM TEXT / DESCRIPTION ────────────────────────────────────
+      const descText = customText || "Disponible maintenant sur KoraChannel";
+      const descY = titleY + titleLines.length * (titleSize + Math.round(6 * scale)) + Math.round(10 * scale);
+      ctx.font = `400 ${Math.round(18 * scale)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      ctx.fillText(fitText(ctx, descText, W - pad * 2), pad, descY);
 
-      // Stars Rating & Review Count
-      const ratingY = dateY + fontDateSize + Math.round(cardH * 0.02);
-      const starSize = Math.max(10, Math.round(width * 0.024));
-
+      // ── 8. STAR RATING ──────────────────────────────────────────────────
+      const starY = descY + Math.round(38 * scale);
+      const starSz = Math.round(22 * scale);
       for (let i = 0; i < 5; i++) {
-        const sx = contentLeft + i * (starSize + 3);
-        ctx.fillStyle = i < Math.floor(data.rating) ? "#F59E0B" : "#D1D5DB";
-        ctx.font = `${starSize}px sans-serif`;
-        ctx.fillText("★", sx, ratingY);
+        ctx.fillStyle = i < Math.floor(data.rating) ? "#F59E0B" : "rgba(255,255,255,0.28)";
+        ctx.font = `${starSz}px sans-serif`;
+        ctx.textBaseline = "top";
+        ctx.fillText("★", pad + i * (starSz + 4), starY);
       }
-
-      // Rating score text (e.g. "4.0 (2)")
-      const fontRatingSize = Math.max(10, Math.round(width * 0.023));
-      ctx.font = `500 ${fontRatingSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#4B5563";
+      ctx.font = `500 ${Math.round(17 * scale)}px Inter, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.fillText(
-        `${data.rating.toFixed(1)} (${data.reviewCount})`,
-        contentLeft + 5 * (starSize + 3) + 6,
-        ratingY + 1
+        `${data.rating.toFixed(1)} (${data.reviewCount} avis)`,
+        pad + 5 * (starSz + 4) + Math.round(10 * scale),
+        starY + 2
       );
 
-      // Specifications line (Disponibilité / Garantie)
-      const fontSpecSize = Math.max(10, Math.round(width * 0.023));
-      const specY = ratingY + starSize + Math.round(cardH * 0.025);
+      // ── 9. STATS ROW ────────────────────────────────────────────────────
+      const statsY = starY + starSz + Math.round(22 * scale);
+      const statItems = [
+        { icon: "🕐", label: "Disponibilité", val: data.availability || "2 jours" },
+        { icon: "✅", label: "Garantie",      val: data.guarantee   || "Complet" },
+        { icon: "🌿", label: "Interventions", val: data.location    || "Sur place" },
+      ];
+      const colW = (W - pad * 2) / 3;
+      statItems.forEach((s, i) => {
+        const sx = pad + i * colW;
+        ctx.font = `${Math.round(18 * scale)}px sans-serif`;
+        ctx.fillStyle = "#fff";
+        ctx.textBaseline = "top";
+        ctx.fillText(s.icon, sx, statsY);
 
-      ctx.font = `bold ${fontSpecSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#111827";
-      ctx.fillText("Disponibilité: ", contentLeft, specY);
+        ctx.font = `600 ${Math.round(14 * scale)}px Inter, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.60)";
+        ctx.fillText(s.label, sx + Math.round(28 * scale), statsY + 1);
 
-      const dispWidth = ctx.measureText("Disponibilité: ").width;
-      ctx.font = `normal ${fontSpecSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#6B7280";
-      ctx.fillText(data.availability || "2 jours", contentLeft + dispWidth, specY);
+        ctx.font = `700 ${Math.round(16 * scale)}px Inter, sans-serif`;
+        ctx.fillStyle = "#fff";
+        ctx.fillText(s.val, sx + Math.round(28 * scale), statsY + Math.round(18 * scale));
+      });
 
-      const dispTotal = contentLeft + dispWidth + ctx.measureText(data.availability || "2 jours").width + 16;
-      ctx.font = `bold ${fontSpecSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#111827";
-      ctx.fillText("Garantie: ", dispTotal, specY);
+      // ── 10. PRICE CARD ──────────────────────────────────────────────────
+      const pcH = Math.round(130 * scale);
+      const pcY = H - Math.round(170 * scale);
+      const pcPad = Math.round(24 * scale);
+      roundRect(ctx, pad, pcY, W - pad * 2, pcH, Math.round(18 * scale));
+      ctx.fillStyle = "rgba(10,10,15,0.88)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.10)";
+      ctx.lineWidth = Math.max(1, scale);
+      ctx.stroke();
 
-      const garWidth = ctx.measureText("Garantie: ").width;
-      ctx.font = `normal ${fontSpecSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#6B7280";
-      ctx.fillText(data.guarantee || "Complet", dispTotal + garWidth, specY);
+      // "À partir de"
+      ctx.font = `400 ${Math.round(14 * scale)}px Inter, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.textBaseline = "top";
+      ctx.fillText("À partir de", pad + pcPad, pcY + Math.round(18 * scale));
 
-      // Price line (Bold bottom title e.g. "Sur devis" or "500 Fbu")
-      const fontPriceSize = Math.max(13, Math.round(width * 0.032));
-      const priceY = specY + fontSpecSize + Math.round(cardH * 0.035);
+      // Price
+      ctx.font = `800 ${Math.round(42 * scale)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(data.price, pad + pcPad, pcY + Math.round(36 * scale));
 
-      ctx.font = `bold ${fontPriceSize}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = "#111827";
-      ctx.fillText(data.price, contentLeft, priceY);
+      // CTA Button
+      const btnW = Math.round(290 * scale);
+      const btnH = Math.round(58 * scale);
+      const btnX = W - pad - pcPad - btnW;
+      const btnY2 = pcY + (pcH - btnH) / 2;
+      roundRect(ctx, btnX, btnY2, btnW, btnH, btnH / 2);
+      ctx.fillStyle = accentColor;
+      ctx.fill();
 
-      // Brand Watermark in bottom right corner
-      const fontBrandSize = Math.max(9, Math.round(width * 0.02));
-      ctx.font = `bold ${fontBrandSize}px Inter, sans-serif`;
-      ctx.fillStyle = "#059669";
-      ctx.textAlign = "right";
-      ctx.fillText("KoraChannel", cardX + cardW - Math.round(cardW * 0.05), priceY + 2);
+      ctx.font = `700 ${Math.round(18 * scale)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("📅 Réserver maintenant", btnX + btnW / 2, btnY2 + btnH / 2);
       ctx.textAlign = "left";
+      ctx.textBaseline = "top";
 
-      // Trigger callback if provided (export full-res data URL)
+      // ── 11. FOOTER ──────────────────────────────────────────────────────
+      ctx.font = `400 ${Math.round(13 * scale)}px Inter, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.42)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(
+        "✔ Paiement sécurisé  •  Service de qualité  •  KoraChannel",
+        W / 2,
+        H - Math.round(18 * scale)
+      );
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+
+      // ── 12. WATERMARK ───────────────────────────────────────────────────
+      ctx.font = `bold ${Math.round(16 * scale)}px Inter, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("KoraChannel", W - Math.round(28 * scale), H - Math.round(44 * scale));
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+
+      // Callback → full-res PNG
       if (onRenderedRef.current && canvasRef.current) {
         onRenderedRef.current(canvasRef.current.toDataURL("image/png", 1.0));
       }
     };
 
-    img.onload = () => {
-      setImageLoaded(true);
-      renderCardContent();
-    };
-
-    img.onerror = () => {
-      renderCardContent();
-    };
-
-    // Render immediately if image cached or failing
-    renderCardContent();
-  }, [data, width, height]);
+    img.onload = draw;
+    img.onerror = draw;
+    // Rendu immédiat si image déjà en cache
+    if (img.complete) draw();
+  }, [data, width, height, accentColor, customText]);
 
   return (
     <canvas
@@ -274,11 +380,11 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
       width={width}
       height={height}
       style={{
-        width: displayWidth ? `${displayWidth}px` : undefined,
-        height: displayHeight ? `${displayHeight}px` : undefined,
+        width: displayWidth ? `${displayWidth}px` : "100%",
+        height: displayHeight ? `${displayHeight}px` : "auto",
         imageRendering: "crisp-edges",
       }}
-      className={`rounded-2xl shadow-sm border border-border/40 max-w-full h-auto ${className}`}
+      className={`rounded-2xl shadow-lg border border-white/10 ${className}`}
     />
   );
 };

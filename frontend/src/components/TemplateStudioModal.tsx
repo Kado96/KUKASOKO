@@ -48,6 +48,9 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
   const [activeTab, setActiveTab] = useState<"visuals" | "captions" | "xml" | "android">("visuals");
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
+  // ── Personnalisation visuelle ─────────────────────────────────────────────────────
+  const [accentColor, setAccentColor] = useState("#F59E0B");
+  const [customText, setCustomText] = useState("");
 
   // Prepare normalized template data
   const formattedPrice = typeof listing.price === "number" ? `${listing.price} Fbu` : listing.price || "Sur devis";
@@ -172,7 +175,7 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
               </div>
 
               {/* Preview Area */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center bg-secondary/30 p-6 rounded-2xl border border-border/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start bg-secondary/30 p-6 rounded-2xl border border-border/50">
                 {/* Visual Canvas Card */}
                 <div className="flex flex-col items-center justify-center">
                   <div className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -185,14 +188,66 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                     data={templateData}
                     width={SOCIAL_CHANNELS[activeChannel]?.width || 1080}
                     height={SOCIAL_CHANNELS[activeChannel]?.height || 1080}
-                    displayWidth={480}
-                    displayHeight={480}
+                    displayWidth={460}
+                    displayHeight={460}
+                    accentColor={accentColor}
+                    customText={customText || undefined}
                     onRendered={(url) => setGeneratedImages((prev) => ({ ...prev, [activeChannel]: url }))}
                   />
                 </div>
 
                 {/* Actions & Infos */}
                 <div className="space-y-4">
+                  {/* ── Personnalisation ──────────────────────── */}
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      🎨 Personnaliser le visuel
+                    </p>
+
+                    {/* Couleur accent */}
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs text-muted-foreground w-28 shrink-0">Couleur principale :</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={accentColor}
+                          onChange={(e) => setAccentColor(e.target.value)}
+                          className="w-9 h-9 rounded-lg cursor-pointer border border-border p-0.5 bg-transparent"
+                          title="Choisir la couleur accent"
+                        />
+                        <span className="text-xs font-mono text-muted-foreground">{accentColor.toUpperCase()}</span>
+                      </div>
+                      {/* Couleurs rapides */}
+                      <div className="flex gap-1.5 ml-auto">
+                        {["#F59E0B", "#EF4444", "#3B82F6", "#10B981", "#8B5CF6", "#EC4899"].map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setAccentColor(c)}
+                            title={c}
+                            style={{ background: c }}
+                            className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                              accentColor === c ? "border-foreground scale-110" : "border-transparent"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Texte personnalisé */}
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs text-muted-foreground w-28 shrink-0">Texte sur la photo :</label>
+                      <input
+                        type="text"
+                        value={customText}
+                        onChange={(e) => setCustomText(e.target.value)}
+                        placeholder="Ex : Disponible ce weekend !"
+                        className="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+                        maxLength={60}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Infos channel */}
                   <div>
                     <h4 className="font-bold text-foreground text-base flex items-center gap-2">
                       <span>{SOCIAL_CHANNELS[activeChannel]?.icon}</span>

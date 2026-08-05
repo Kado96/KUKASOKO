@@ -100,32 +100,32 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
     }
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `kukasoko_${listing.id}_${channelId}.png`;
+    a.download = `korachannel_${listing.id}_${channelId}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast({ title: "Image téléchargée ! 🖼️", description: `Format ${SOCIAL_CHANNELS[channelId]?.name} prêt à publier.` });
+    toast({ title: "Image HD téléchargée ! 🖼️", description: `Format ${SOCIAL_CHANNELS[channelId]?.name} prêt à publier — KoraChannel.` });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 rounded-2xl bg-card border-border shadow-2xl">
-        <DialogHeader className="p-6 bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-700 text-white rounded-t-2xl flex flex-row items-center justify-between space-y-0">
+        <DialogHeader className="sticky top-0 z-10 p-5 bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-700 text-white rounded-t-2xl flex flex-row items-center justify-between space-y-0 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg">
-              ✨
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg shrink-0">
+              🎙️
             </div>
             <div>
-              <DialogTitle className="text-xl font-display font-bold text-white">
-                Studio de Publication Multi-Canaux
+              <DialogTitle className="text-xl font-display font-bold text-white leading-tight">
+                Studio de Publication Kora
               </DialogTitle>
-              <DialogDescription className="text-xs text-white/80 mt-0.5">
+              <DialogDescription className="text-xs text-white/80 mt-0.5 leading-snug">
                 1 seule annonce ➔ Génération automatique pour Web, Android & Tous Réseaux Sociaux
               </DialogDescription>
             </div>
           </div>
-          <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 text-xs px-3 py-1 font-semibold">
-            Omnichannel Engine v1.0
+          <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 text-xs px-3 py-1 font-semibold shrink-0 ml-3">
+            KoraChannel
           </Badge>
         </DialogHeader>
 
@@ -183,8 +183,10 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                   </div>
                   <ListingCardCanvas
                     data={templateData}
-                    width={480}
-                    height={480}
+                    width={SOCIAL_CHANNELS[activeChannel]?.width || 1080}
+                    height={SOCIAL_CHANNELS[activeChannel]?.height || 1080}
+                    displayWidth={480}
+                    displayHeight={480}
                     onRendered={(url) => setGeneratedImages((prev) => ({ ...prev, [activeChannel]: url }))}
                   />
                 </div>
@@ -217,7 +219,7 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                       onClick={() => handleDownloadImage(activeChannel)}
                       className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold gap-2 shadow-md"
                     >
-                      <Download className="w-4 h-4" /> Télécharger au format {SOCIAL_CHANNELS[activeChannel]?.name}
+                      <Download className="w-4 h-4" /> Télécharger HD — {SOCIAL_CHANNELS[activeChannel]?.name}
                     </Button>
                     <Button
                       variant="outline"

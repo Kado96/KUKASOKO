@@ -221,7 +221,7 @@ const AnnonceDetail = () => {
                     size="sm"
                     className="bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-white font-bold gap-1.5 text-xs shadow-sm"
                   >
-                    ✨ Studio Multi-Canaux
+                    🎙️ Studio Kora
                   </Button>
                   <button onClick={handleFavorite} className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border transition-colors ${isFavorite ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-accent hover:bg-secondary"}`}>
                     <Heart className={`w-3.5 h-3.5 ${isFavorite ? "fill-red-500" : ""}`} /> {isFavorite ? "Favori" : "Favoris"}
@@ -452,7 +452,7 @@ const AnnonceDetail = () => {
                     onClick={() => setShowStudioModal(true)}
                     className="w-full bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-white font-bold gap-2 text-xs shadow-md"
                   >
-                    ✨ Studio Multi-Canaux (IG, FB, WA, XML)
+                    🎙️ KoraChannel — Studio Kora
                   </Button>
                 </div>
 
@@ -613,7 +613,7 @@ const AnnonceDetail = () => {
       </main>
       <Footer />
 
-      {/* Studio Multi-Canaux Modal */}
+      {/* Studio Kora — KoraChannel Modal */}
       {listing && (
         <TemplateStudioModal
           isOpen={showStudioModal}

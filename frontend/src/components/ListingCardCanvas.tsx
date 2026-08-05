@@ -6,14 +6,19 @@ interface ListingCardCanvasProps {
   data: ListingTemplateData;
   width?: number;
   height?: number;
+  /** Taille d’affichage CSS (le canvas est rendu en pleine résolution HD mais affiché en plus petit) */
+  displayWidth?: number;
+  displayHeight?: number;
   className?: string;
   onRendered?: (dataUrl: string) => void;
 }
 
 export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
   data,
-  width = 500,
-  height = 500,
+  width = 1080,
+  height = 1080,
+  displayWidth,
+  displayHeight,
   className = "",
   onRendered,
 }) => {
@@ -34,6 +39,9 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
 
     // Clear
     ctx.clearRect(0, 0, width, height);
+    // Activer le lissage haute qualité pour des photos nettes (comme Instagram)
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     // Draw background rounded card
     const padding = Math.round(width * 0.03);
@@ -238,12 +246,12 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
       ctx.font = `bold ${fontBrandSize}px Inter, sans-serif`;
       ctx.fillStyle = "#059669";
       ctx.textAlign = "right";
-      ctx.fillText("KUKASOKO", cardX + cardW - Math.round(cardW * 0.05), priceY + 2);
+      ctx.fillText("KoraChannel", cardX + cardW - Math.round(cardW * 0.05), priceY + 2);
       ctx.textAlign = "left";
 
-      // Trigger callback if provided
+      // Trigger callback if provided (export full-res data URL)
       if (onRenderedRef.current && canvasRef.current) {
-        onRenderedRef.current(canvasRef.current.toDataURL("image/png"));
+        onRenderedRef.current(canvasRef.current.toDataURL("image/png", 1.0));
       }
     };
 
@@ -265,6 +273,11 @@ export const ListingCardCanvas: React.FC<ListingCardCanvasProps> = ({
       ref={canvasRef}
       width={width}
       height={height}
+      style={{
+        width: displayWidth ? `${displayWidth}px` : undefined,
+        height: displayHeight ? `${displayHeight}px` : undefined,
+        imageRendering: "crisp-edges",
+      }}
       className={`rounded-2xl shadow-sm border border-border/40 max-w-full h-auto ${className}`}
     />
   );

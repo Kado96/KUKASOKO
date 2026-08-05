@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { allListings } from "@/data/listings";
+import { CategorySearchFilters, type CatNode } from "@/components/CategorySearchFilters";
 
 // Fix default Leaflet icon
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -668,68 +669,44 @@ export default function Carte() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pt-16">
+    <div className="h-screen bg-background flex flex-col pt-16 overflow-hidden">
       <Navbar />
 
-      {/* ── Search + Filter bar — identical premium style to /annonces ── */}
+      {/* ── Search + Filter bar — ultra-compact inline style ── */}
       <div className="bg-background border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search input with icon */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex flex-col md:flex-row gap-2 items-center">
+            {/* Recherche compacte */}
+            <div className="relative w-full md:w-1/3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 id="carte-search"
                 name="carte-search"
-                type="text"
+                type="search"
                 autoComplete="off"
-                placeholder="Rechercher une annonce sur la carte..."
+                placeholder="Rechercher sur la carte..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent transition-all shadow-sm"
+                className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-accent shadow-sm"
               />
             </div>
-            {/* Category select dropdown */}
-            <select
-              id="carte-category"
-              name="carte-category"
-              value={selectedCategory ?? "all"}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value === "all" ? null : Number(e.target.value));
-                setSelectedSubCategory(null);
-              }}
-              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[180px]"
-            >
-              <option value="all">Toutes les catégories</option>
-              {categoryTree.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <select
-              id="carte-subcategory"
-              name="carte-subcategory"
-              value={selectedSubCategory ?? "all"}
-              onChange={(e) =>
-                setSelectedSubCategory(e.target.value === "all" ? null : Number(e.target.value))
-              }
-              disabled={subcats.length === 0}
-              className="h-11 px-4 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer transition-all shadow-sm min-w-[180px] disabled:opacity-70 disabled:text-muted-foreground"
-            >
-              <option value="all">
-                {!selectedCategory
-                  ? "Sous-catégorie"
-                  : subcats.length === 0
-                    ? "Aucune sous-catégorie"
-                    : "Toutes les sous-catégories"}
-              </option>
-              {subcats.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.name}
-                </option>
-              ))}
-            </select>
+            {/* Filtres de catégorie ultra-compacts */}
+            <div className="w-full md:flex-1">
+              <CategorySearchFilters
+                tree={categoryTree as CatNode[]}
+                category={selectedCategory === null ? "all" : String(selectedCategory)}
+                subCategory={selectedSubCategory === null ? "all" : String(selectedSubCategory)}
+                onCategoryChange={(v) => {
+                  setSelectedCategory(v === "all" ? null : Number(v));
+                  setSelectedSubCategory(null);
+                }}
+                onSubCategoryChange={(v) =>
+                  setSelectedSubCategory(v === "all" ? null : Number(v))
+                }
+                variant="page"
+                className="grid-cols-2 gap-2"
+              />
+            </div>
           </div>
           {/* Result count / status */}
           <p className="text-xs font-medium text-muted-foreground mt-2 flex items-center gap-1.5 h-4">
@@ -741,7 +718,7 @@ export default function Carte() {
         </div>
       </div>
 
-      <div className="relative w-full h-[65vh] min-h-[400px]">
+      <div className="relative w-full flex-1 min-h-[400px]">
         {/* Map */}
         <div ref={mapRef} className="w-full h-full" />
 

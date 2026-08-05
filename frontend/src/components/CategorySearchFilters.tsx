@@ -63,7 +63,7 @@ function NativeSelect({
         onChange={(e) => onChange(e.target.value)}
         className={cn(
           baseSelectClass,
-          "h-full px-4 py-0",
+          "h-full pl-3 pr-8 py-0 text-xs",
           disabled && "opacity-50 cursor-not-allowed"
         )}
         aria-label={placeholder}
@@ -111,16 +111,16 @@ export function CategorySearchFilters({
         : "Aucune sous-catégorie";
 
   const labelClass =
-    "text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5 text-muted-foreground";
+    "text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mb-1 text-muted-foreground";
 
   // Classes du wrapper du select selon variante
   const wrapperClass = cn(
     "relative",
     isHero
       ? isInline
-        ? "h-14 hover:bg-secondary/30 transition-colors"
-        : "h-11 sm:h-12 bg-secondary/40 hover:bg-secondary/60 rounded-xl transition-colors"
-      : "h-11 bg-card border border-border rounded-xl"
+        ? "h-10 hover:bg-secondary/30 transition-colors"
+        : "h-9 bg-secondary/40 hover:bg-secondary/60 rounded-lg transition-colors"
+      : "h-9 bg-card border border-border rounded-lg"
   );
 
   const categoryField = (

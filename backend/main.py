@@ -51,8 +51,11 @@ app.add_middleware(
         "http://localhost:8081",
         # Production
         "https://kukasoko.wuaze.com",
-        "https://kukasoko.onrender.com",
+        "http://kukasoko.wuaze.com",
         "https://www.kukasoko.wuaze.com",
+        "http://www.kukasoko.wuaze.com",
+        "https://kukasoko.onrender.com",
+        "http://kukasoko.onrender.com",
         # Variable d'environnement (optionnelle)
         *_extra_origins,
     ],

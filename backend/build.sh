@@ -10,4 +10,7 @@ pip install --upgrade pip
 # --prefer-binary : force les wheels pré-compilés, évite la compilation Rust
 pip install --prefer-binary -r requirements.txt
 
+echo "🗄️  Application des migrations Alembic..."
+python -m alembic upgrade head
+
 echo "✅ Build terminé avec succès !"

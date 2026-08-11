@@ -1359,13 +1359,14 @@ const MaBoutique = () => {
                   <button
                     onClick={() => setEditingShop(false)}
                     className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground"
+                    type="button"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <form onSubmit={handleUpdateShop} className="flex-1 overflow-y-auto p-5 space-y-5">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bannière</label>
+                    <label htmlFor="edit-shop-cover" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bannière</label>
                     <div className="mt-1 relative h-36 sm:h-44 rounded-xl border-2 border-dashed border-border bg-secondary/30 overflow-hidden">
                       {shopForm.cover ? (
                         <img src={shopForm.cover} alt="Bannière" className="w-full h-full object-cover" />
@@ -1377,6 +1378,8 @@ const MaBoutique = () => {
                       )}
                       <input
                         ref={coverInputRef}
+                        id="edit-shop-cover"
+                        name="edit-shop-cover"
                         type="file"
                         accept="image/*"
                         className="hidden"
@@ -1408,7 +1411,7 @@ const MaBoutique = () => {
 
                   <div className="flex items-start gap-4">
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logo</label>
+                      <label htmlFor="edit-shop-logo" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logo</label>
                       <div className="mt-1 relative w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-secondary/30 overflow-hidden">
                         {shopForm.logo ? (
                           <img src={shopForm.logo} alt="Logo" className="w-full h-full object-cover" />
@@ -1419,6 +1422,8 @@ const MaBoutique = () => {
                         )}
                         <input
                           ref={logoInputRef}
+                          id="edit-shop-logo"
+                          name="edit-shop-logo"
                           type="file"
                           accept="image/*"
                           className="hidden"
@@ -1603,7 +1608,7 @@ const MaBoutique = () => {
 
                   {/* Images */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Photos</label>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Photos</p>
                     <div className="flex flex-wrap gap-2 pt-1">
                       {editForm.images.map((img, i) => (
                         <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group shrink-0">

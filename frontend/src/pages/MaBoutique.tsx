@@ -1,4 +1,4 @@
-﻿import Navbar from "@/components/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -395,29 +395,30 @@ const ListingCard = ({ listing, isMerchant, onDelete, onEdit }: ListingCardProps
 
   return (
     <div className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-      <Link to={`/annonces/${listing.id}`} className="block relative aspect-[4/3] overflow-hidden bg-secondary">
-        <img
-          src={listing.image}
-          alt={listing.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <Badge className="absolute top-3 left-3 bg-[#febb2d] text-zinc-950 border-0 text-xs font-semibold shadow-sm">
+      <div className="block relative aspect-[4/3] overflow-hidden bg-secondary">
+        <Link to={`/annonces/${listing.id}`} className="absolute inset-0 block w-full h-full">
+          <img
+            src={listing.image}
+            alt={listing.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </Link>
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <Badge className="absolute top-3 left-3 bg-[#febb2d] text-zinc-950 border-0 text-xs font-semibold shadow-sm z-10">
           {listing.category}
         </Badge>
         {/* Badge expiration 24h (clients sans boutique) */}
         {expiresIn && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/70 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/70 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full z-10">
             <Clock className="w-3 h-3 text-[#febb2d]" />
             <span>Expire dans {expiresIn}</span>
           </div>
         )}
         {/* Boutons d'action (visibles au hover) */}
-        <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
           <Link
             to={`/annonces/${listing.id}`}
             className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
-            onClick={(e) => e.stopPropagation()}
           >
             <Eye className="w-4 h-4 text-foreground" />
           </Link>
@@ -448,7 +449,7 @@ const ListingCard = ({ listing, isMerchant, onDelete, onEdit }: ListingCardProps
             <Trash2 className="w-4 h-4 text-destructive" />
           </button>
         </div>
-      </Link>
+      </div>
       <div className="p-4 flex-1 flex flex-col gap-2">
         <h4 className="font-semibold text-foreground text-sm line-clamp-2 leading-snug group-hover:text-[#febb2d] transition-colors">{listing.title}</h4>
         {/* Indicateur de délai de modification pour clients sans boutique */}
@@ -1625,7 +1626,7 @@ const MaBoutique = () => {
                             <span className="text-[9px]">Ajouter</span>
                           </>
                         )}
-                        <input id="edit-img-upload" type="file" accept="image/*" multiple disabled={editUploading} onChange={handleEditImageUpload} className="hidden" />
+                        <input id="edit-img-upload" name="edit-img-upload" type="file" accept="image/*" multiple disabled={editUploading} onChange={handleEditImageUpload} className="hidden" />
                       </label>
                     </div>
                   </div>

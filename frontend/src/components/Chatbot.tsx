@@ -315,6 +315,8 @@ const Chatbot = () => {
               className="flex gap-2"
             >
               <input
+                id="chatbot-input"
+                name="chatbot-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Posez votre question…"

@@ -27,12 +27,30 @@ export function formatDistance(km: number): string {
 }
 
 /** Vérifie si la géolocalisation est disponible dans ce contexte (HTTPS requis sur Android) */
-function isSecureContext(): boolean {
+function checkSecureContext(): boolean {
   return (
     window.isSecureContext ||
     location.hostname === "localhost" ||
     location.hostname === "127.0.0.1"
   );
+}
+
+/** Localisation approximative par adresse IP (fonctionne sur HTTP, niveau ville) */
+async function locateByIP(): Promise<UserLocation | null> {
+  try {
+    const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    if (data?.latitude && data?.longitude) {
+      return {
+        lat: data.latitude,
+        lng: data.longitude,
+        city: data.city || data.region || undefined,
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 export function useUserLocation() {
@@ -52,16 +70,32 @@ export function useUserLocation() {
   }, [location]);
 
   const requestLocation = useCallback(() => {
-    // Vérifier si le contexte est sécurisé (HTTPS requis sur Android Chrome)
-    if (!isSecureContext()) {
-      setError(
-        "La géolocalisation nécessite HTTPS. Accédez au site via https:// pour activer cette fonctionnalité."
-      );
+    // Contexte non-sécurisé (HTTP) → fallback par IP automatique
+    if (!checkSecureContext()) {
+      setLoading(true);
+      setError(null);
+      locateByIP().then((ipLoc) => {
+        if (ipLoc) {
+          setLocation(ipLoc);
+          setError(null);
+        } else {
+          setError(
+            "Localisation impossible. Pour une position précise, accédez au site en HTTPS."
+          );
+        }
+        setLoading(false);
+      });
       return;
     }
 
     if (!navigator.geolocation) {
-      setError("Géolocalisation non supportée par votre navigateur.");
+      setLoading(true);
+      // Fallback IP si geolocation API absente
+      locateByIP().then((ipLoc) => {
+        if (ipLoc) setLocation(ipLoc);
+        else setError("Géolocalisation non supportée par votre navigateur.");
+        setLoading(false);
+      });
       return;
     }
 
@@ -88,21 +122,26 @@ export function useUserLocation() {
         setLocation({ lat: latitude, lng: longitude, city });
         setLoading(false);
       },
-      (err) => {
-        let msg = "Erreur inconnue.";
-        switch (err.code) {
-          case 1: // PERMISSION_DENIED
-            msg =
-              "Permission refusée. Sur Android : ouvrez les paramètres du navigateur → Autorisations du site → Position → Autorisez kukasoko.wuaze.com.";
-            break;
-          case 2: // POSITION_UNAVAILABLE
-            msg = "Position indisponible. Vérifiez que le GPS est activé sur votre appareil.";
-            break;
-          case 3: // TIMEOUT
-            msg = "Délai dépassé. Veuillez réessayer en extérieur ou activer le Wi-Fi.";
-            break;
+      async (err) => {
+        // En cas d'erreur GPS, essayer le fallback IP
+        if (err.code === 1) {
+          // Permission refusée : essayer IP silencieusement
+          const ipLoc = await locateByIP();
+          if (ipLoc) {
+            setLocation(ipLoc);
+            setError("Position approximative (GPS refusé — localisation par réseau).");
+          } else {
+            setError(
+              "Permission refusée. Sur Android : Paramètres navigateur → Autorisations du site → Position → Autoriser kukasoko.wuaze.com."
+            );
+          }
+        } else if (err.code === 2) {
+          const ipLoc = await locateByIP();
+          if (ipLoc) setLocation(ipLoc);
+          else setError("Position GPS indisponible. Vérifiez que le GPS est activé.");
+        } else {
+          setError("Délai dépassé. Veuillez réessayer en extérieur ou activer le Wi-Fi.");
         }
-        setError(msg);
         setLoading(false);
       },
       {

@@ -9,7 +9,7 @@ import ShareModal from "@/components/ShareModal";
 
 import { listingsAPI, API_BASE } from "@/services/api";
 import { CategorySearchFilters, type CatNode } from "@/components/CategorySearchFilters";
-import kukasokoBrain, { type KnowledgeItem } from "@/services/KukasokoBrainService";
+import { KukasokoBrain as kukasokoBrain, type KnowledgeItem } from "@/services/KukasokoBrainService";
 
 type CatNodeLocal = CatNode;
 

@@ -327,10 +327,11 @@ class KukasokoBrainService {
 
   // ─── Recherche BM25 ────────────────────────────────────────────────────────
 
-  private search(
+  /** Recherche BM25 publique – utilisable directement depuis les pages */
+  search(
     query: string,
     typeFilter?: KnowledgeItem["type"][],
-    topK = 4
+    topK = 20
   ): KnowledgeItem[] {
     const queryTokens = tokenize(query);
     if (queryTokens.length === 0) return [];

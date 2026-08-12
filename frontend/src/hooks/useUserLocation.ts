@@ -26,6 +26,15 @@ export function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
+/** Vérifie si la géolocalisation est disponible dans ce contexte (HTTPS requis sur Android) */
+function isSecureContext(): boolean {
+  return (
+    window.isSecureContext ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1"
+  );
+}
+
 export function useUserLocation() {
   const [location, setLocation] = useState<UserLocation | null>(() => {
     try {
@@ -43,12 +52,22 @@ export function useUserLocation() {
   }, [location]);
 
   const requestLocation = useCallback(() => {
+    // Vérifier si le contexte est sécurisé (HTTPS requis sur Android Chrome)
+    if (!isSecureContext()) {
+      setError(
+        "La géolocalisation nécessite HTTPS. Accédez au site via https:// pour activer cette fonctionnalité."
+      );
+      return;
+    }
+
     if (!navigator.geolocation) {
       setError("Géolocalisation non supportée par votre navigateur.");
       return;
     }
+
     setLoading(true);
     setError(null);
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -64,27 +83,40 @@ export function useUserLocation() {
             data?.address?.village ||
             data?.address?.county;
         } catch {
-          /* ignore */
+          /* ignore — le nom de ville est optionnel */
         }
         setLocation({ lat: latitude, lng: longitude, city });
         setLoading(false);
       },
       (err) => {
-        const msgs: Record<number, string> = {
-          1: "Vous avez refusé l'accès à votre position.",
-          2: "Position indisponible.",
-          3: "Délai dépassé.",
-        };
-        setError(msgs[err.code] || "Erreur inconnue.");
+        let msg = "Erreur inconnue.";
+        switch (err.code) {
+          case 1: // PERMISSION_DENIED
+            msg =
+              "Permission refusée. Sur Android : ouvrez les paramètres du navigateur → Autorisations du site → Position → Autorisez kukasoko.wuaze.com.";
+            break;
+          case 2: // POSITION_UNAVAILABLE
+            msg = "Position indisponible. Vérifiez que le GPS est activé sur votre appareil.";
+            break;
+          case 3: // TIMEOUT
+            msg = "Délai dépassé. Veuillez réessayer en extérieur ou activer le Wi-Fi.";
+            break;
+        }
+        setError(msg);
         setLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,     // 15s pour Android (GPS plus lent)
+        maximumAge: 60000,  // Accepte une position vieille de max 1 min
+      }
     );
   }, []);
 
   const clearLocation = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setLocation(null);
+    setError(null);
   }, []);
 
   return { location, loading, error, requestLocation, clearLocation };

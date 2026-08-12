@@ -120,28 +120,66 @@ const Annonces = () => {
 
   const selectedParent = tree.find((c) => String(c.id) === filterCat);
 
+  // IDs effectifs de la catégorie active (parent + ses enfants si pas de sous-cat sélectionnée)
   const activeCatId = filterSubCat !== "all" ? filterSubCat : filterCat;
-  const childIds =
+  const childIds: Set<string> | null =
     filterSubCat === "all" && selectedParent
-      ? new Set([String(selectedParent.id), ...(selectedParent.children || []).map((c) => String(c.id))])
+      ? new Set([
+          String(selectedParent.id),
+          ...(selectedParent.children || []).map((c) => String(c.id)),
+        ])
       : null;
 
-  const filtered = listings.filter((l) => {
-    const matchSearch = l.title.toLowerCase().includes(search.toLowerCase()) || 
-                        l.description?.toLowerCase().includes(search.toLowerCase());
-    let matchCat = true;
-    if (activeCatId !== "all") {
-      if (childIds) {
-        matchCat =
-          childIds.has(String(l.categoryId)) ||
-          l.category === selectedParent?.name_fr ||
-          l.category === selectedParent?.name;
-      } else {
-        matchCat = String(l.categoryId) === activeCatId || l.category === activeCatId;
+  // Noms canoniques de la catégorie choisie (fr + en) pour matcher les annonces mock
+  const selectedParentNames = selectedParent
+    ? new Set([
+        selectedParent.name?.toLowerCase(),
+        (selectedParent as any).name_fr?.toLowerCase(),
+        (selectedParent as any).name_en?.toLowerCase(),
+      ].filter(Boolean))
+    : null;
+
+  // Recherche BM25-like : tri par pertinence (titre > catégorie > description)
+  const q = search.trim().toLowerCase();
+  const scoreOf = (l: any): number => {
+    if (!q) return 1;
+    let score = 0;
+    if (l.title?.toLowerCase().includes(q)) score += 3;
+    if (l.category?.toLowerCase().includes(q)) score += 2;
+    if (l.description?.toLowerCase().includes(q)) score += 1;
+    return score;
+  };
+
+  const filtered = listings
+    .filter((l) => {
+      // Filtre texte
+      if (q) {
+        const inTitle = l.title?.toLowerCase().includes(q);
+        const inDesc = l.description?.toLowerCase().includes(q);
+        const inCat = l.category?.toLowerCase().includes(q);
+        if (!inTitle && !inDesc && !inCat) return false;
       }
-    }
-    return matchSearch && matchCat;
-  });
+
+      // Filtre catégorie
+      if (activeCatId !== "all") {
+        if (childIds) {
+          // Vérifier par ID OU par nom (pour les annonces mock qui n'ont pas d'ID)
+          const matchById = childIds.has(String(l.categoryId || "")) ||
+                            childIds.has(String(l.parentCategoryId || ""));
+          const matchByName = selectedParentNames
+            ? selectedParentNames.has(l.category?.toLowerCase())
+            : false;
+          if (!matchById && !matchByName) return false;
+        } else {
+          const matchById = String(l.categoryId || "") === activeCatId ||
+                            String(l.parentCategoryId || "") === activeCatId;
+          const matchByName = l.category?.toLowerCase() === activeCatId?.toLowerCase();
+          if (!matchById && !matchByName) return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => scoreOf(b) - scoreOf(a));
 
   return (
     <div className="min-h-screen bg-background">

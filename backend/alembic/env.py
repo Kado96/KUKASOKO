@@ -13,8 +13,9 @@ import app.models  # noqa: F401  — ensures all models are registered
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override sqlalchemy.url with our settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url with our settings (using the fixed _url from database.py)
+from app.database import _url
+config.set_main_option("sqlalchemy.url", _url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

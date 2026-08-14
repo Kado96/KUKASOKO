@@ -50,12 +50,12 @@ Ajoutez vos images dans le dossier `frontend/resources/` (à créer) ou utilisez
 ### 2. Générer automatiquement les icônes pour toutes les tailles d'écrans
 Installez l'outil de génération de ressources de Capacitor :
 ```bash
-npm install -D @capacitor/assets
-```
-
-Puis lancez la génération automatique de toutes les icônes Android :
+Lancez la génération automatique de toutes les icônes Android :
 ```bash
-npx capacitor-assets generate --android
+npx @capacitor/assets generate --android (icônes/splash)
+npm run build (compilation web)
+npx cap sync android (sync vers Android)
+npx cap open android (ouvrir Android Studio)
 ```
 *(Cela va découper et placer automatiquement les images dans tous les formats requis par Android dans le dossier `android/app/src/main/res/`).*
 

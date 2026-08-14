@@ -1,4 +1,4 @@
-import { MapPin, Loader2, Navigation, X, Wifi } from "lucide-react";
+import { MapPin, Loader2, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserLocation } from "@/hooks/useUserLocation";
 
@@ -30,9 +30,8 @@ const LocationBanner = () => {
   return (
     <div className="bg-primary/5 border-b border-border">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
-          <Wifi className="w-3.5 h-3.5 shrink-0" />
-          Activez votre position pour découvrir les annonces près de vous
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          🌍 Activez votre position pour découvrir les annonces autour de vous
         </p>
         <Button
           onClick={requestLocation}
@@ -44,13 +43,9 @@ const LocationBanner = () => {
           <span className="flex items-center justify-center shrink-0 w-3.5 h-3.5">
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
           </span>
-          <span>{loading ? "Localisation…" : "Me localiser"}</span>
+          <span>Me localiser</span>
         </Button>
-        {error && (
-          <span className="text-xs text-muted-foreground w-full sm:w-auto leading-snug italic">
-            ℹ️ {error}
-          </span>
-        )}
+        {error && <span className="text-xs text-destructive w-full sm:w-auto">{error}</span>}
       </div>
     </div>
   );

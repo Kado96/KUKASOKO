@@ -251,7 +251,7 @@ const Chatbot = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full bg-accent text-accent-foreground shadow-xl hover:bg-accent/90 hover:scale-110 transition-all flex items-center justify-center"
+          className="fixed bottom-16 right-6 z-[9999] w-14 h-14 rounded-full bg-accent text-accent-foreground shadow-xl hover:bg-accent/90 hover:scale-110 transition-all flex items-center justify-center"
           aria-label="Ouvrir l'assistant Kukasoko"
         >
           <MessageCircle className="w-6 h-6" />
@@ -260,7 +260,7 @@ const Chatbot = () => {
 
       {/* Fenêtre du chat */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[9999] w-[380px] max-w-[calc(100vw-1.5rem)] h-[580px] max-h-[calc(100vh-5rem)] bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
+        <div className="fixed bottom-16 right-6 z-[9999] w-[380px] max-w-[calc(100vw-1.5rem)] h-[580px] max-h-[calc(100vh-5rem)] bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
 
           {/* Header */}
           <div className="bg-gradient-to-r from-amber-500 to-emerald-600 text-white px-4 py-3 flex items-center justify-between shrink-0">

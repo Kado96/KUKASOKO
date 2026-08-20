@@ -2,10 +2,11 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, Search, Map, MessageSquare, PlusCircle, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 export const MobileBottomNav = () => {
   const location = useLocation();
-  const { unreadCount } = useAuth();
+  const { unreadCount, isAuthenticated } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -68,6 +69,13 @@ export const MobileBottomNav = () => {
         </div>
         <span className="text-[10px]">Messages</span>
       </Link>
+
+      {isAuthenticated && (
+        <div className="flex flex-col items-center justify-center min-w-[56px] text-muted-foreground">
+          <NotificationBell />
+          <span className="text-[10px] mt-0.5">Notifs</span>
+        </div>
+      )}
     </div>
   );
 };

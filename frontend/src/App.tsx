@@ -21,6 +21,9 @@ import Carte from "./pages/Carte";
 import Messages from "./pages/Messages";
 import Marchand from "./pages/Marchand";
 import NotFound from "./pages/NotFound";
+import Pricing from "./pages/Pricing";
+import About from "./pages/About";
+import AdminDashboard from "./pages/AdminDashboard";
 import Chatbot from "./components/Chatbot";
 import NewsTicker from "./components/NewsTicker";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -89,6 +92,9 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/a-propos" element={<About />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Chatbot />

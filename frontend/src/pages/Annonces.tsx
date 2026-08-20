@@ -53,6 +53,7 @@ function apiToDisplay(l: any) {
     details: [
       { label: "Localisation", value: l.address || l.city || "Bujumbura" },
     ],
+    is_featured: l.is_featured || false,
   };
 }
 
@@ -112,18 +113,7 @@ const Annonces = () => {
       .then((res) => {
         if (Array.isArray(res.data)) {
           const apiListings = res.data.map(apiToDisplay);
-          const formattedMocks = allListings.map((m: any) => ({
-            ...m,
-            uniqueKey: `mock-${m.id}`,
-            description: m.description || "",
-            // Assigner des IDs fixes pour les mocks (correspondant aux catégories backend si possible)
-            categoryId: m.category === "Immobilier" ? "1"
-              : m.category === "Véhicules" ? "2"
-              : m.category === "Services" ? "3"
-              : "4",
-            parentCategoryId: null,
-          }));
-          setListings([...apiListings, ...formattedMocks]);
+          setListings(apiListings);
         }
       })
       .catch(() => {
@@ -132,9 +122,8 @@ const Annonces = () => {
           uniqueKey: `mock-${m.id}`,
           description: m.description || "",
           categoryId: m.category === "Immobilier" ? "1"
-            : m.category === "Véhicules" ? "2"
             : m.category === "Services" ? "3"
-            : "4",
+            : "2",
           parentCategoryId: null,
         }));
         setListings(formattedMocks);
@@ -144,22 +133,31 @@ const Annonces = () => {
 
   // Synchronise les filtres avec les paramètres d'URL
   useEffect(() => {
-    const cat = searchParams.get("category");
+    const cat = searchParams.get("category") || searchParams.get("category_id");
     if (!cat || tree.length === 0) {
       if (cat) setFilterCat(cat);
       return;
     }
-    const asParent = tree.find((c) => String(c.id) === cat);
+    const normalizedCat = cat.toLowerCase();
+    const asParent = tree.find(
+      (c) =>
+        String(c.id) === cat ||
+        (c.name_fr || c.name || "").toLowerCase() === normalizedCat
+    );
     if (asParent) {
-      setFilterCat(cat);
+      setFilterCat(String(asParent.id));
       setFilterSubCat("all");
       return;
     }
     for (const parent of tree) {
-      const child = parent.children?.find((c) => String(c.id) === cat);
+      const child = parent.children?.find(
+        (c) =>
+          String(c.id) === cat ||
+          (c.name_fr || c.name || "").toLowerCase() === normalizedCat
+      );
       if (child) {
         setFilterCat(String(parent.id));
-        setFilterSubCat(cat);
+        setFilterSubCat(String(child.id));
         return;
       }
     }
@@ -350,7 +348,9 @@ const Annonces = () => {
               {filtered.map((listing) => (
                 <div
                   key={listing.uniqueKey}
-                  className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 group flex flex-col justify-between"
+                  className={`bg-card rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between ${
+                    listing.is_featured ? 'ring-2 ring-amber-500 shadow-amber-500/15 scale-[1.01]' : ''
+                  }`}
                 >
                   <div>
                     <Link to={`/annonces/${listing.id}`} className="block relative aspect-[16/10] overflow-hidden">
@@ -363,6 +363,11 @@ const Annonces = () => {
                       <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0 font-semibold text-xs">
                         {listing.category}
                       </Badge>
+                      {listing.is_featured && (
+                        <Badge className="absolute top-3 right-3 bg-gradient-to-tr from-amber-500 to-yellow-400 text-black border-0 font-extrabold text-[10px] uppercase tracking-wider py-1 px-2 shadow-md">
+                          ⭐ Urgent / VIP
+                        </Badge>
+                      )}
                     </Link>
                     <div className="p-5 pb-0">
                       <Link to={`/annonces/${listing.id}`}>

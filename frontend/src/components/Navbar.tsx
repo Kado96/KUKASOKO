@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useSite } from "@/contexts/SiteContext";
+import NotificationBell from "./NotificationBell";
 
 const navLinks = [
   { to: "/", label: "Accueil" },
@@ -13,6 +14,8 @@ const navLinks = [
   { to: "/messages", label: "Messages" },
   { to: "/boutique", label: "Boutique" },
   { to: "/blog", label: "Blog" },
+  { to: "/pricing", label: "Tarifs" },
+  { to: "/a-propos", label: "À Propos" },
 ];
 
 const Navbar = () => {
@@ -25,8 +28,8 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[1100] bg-primary/95 backdrop-blur-md border-b border-primary-foreground/10">
-      <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link to="/" className="flex items-center gap-2">
+      <div className="max-w-[1400px] mx-auto flex items-center justify-between h-16 px-4 gap-4">
+        <Link to="/" className="flex items-center gap-2 shrink-0">
           {settings.siteLogo ? (
             <img src={settings.siteLogo} alt="Logo" className="w-9 h-9 rounded-lg object-cover" />
           ) : (
@@ -37,20 +40,20 @@ const Navbar = () => {
             </div>
           )}
           <div className="flex flex-col leading-tight">
-            <span className="font-display font-bold text-primary-foreground text-lg tracking-tight uppercase">
+            <span className="font-display font-bold text-primary-foreground text-base tracking-tight uppercase">
               {settings.siteName}
             </span>
-            <span className="text-[10px] text-primary-foreground/60 uppercase tracking-widest">Online</span>
+            <span className="text-[9px] text-primary-foreground/60 uppercase tracking-widest">Online</span>
           </div>
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden xl:flex items-center gap-6 flex-1 justify-center">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`text-sm font-medium transition-colors flex items-center gap-1.5 ${isActive(link.to) ? "text-accent" : "text-primary-foreground/80 hover:text-primary-foreground"}`}
+              className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${isActive(link.to) ? "text-accent" : "text-primary-foreground/80 hover:text-primary-foreground"}`}
             >
               <span>{link.label}</span>
               {link.to === "/messages" && unreadCount > 0 && (
@@ -62,37 +65,43 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
+        {/* Action buttons section */}
+        <div className="hidden md:flex items-center gap-3 shrink-0">
+          {isAuthenticated && (
+            <div className="text-white hover:text-white/80">
+              <NotificationBell />
+            </div>
+          )}
           <Link to="/ma-boutique">
-            <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+            <Button variant="ghost" size="sm" className="h-10 text-sm text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 px-3">
               <Store className="w-4 h-4 mr-2" />
               Ma Boutique
             </Button>
           </Link>
           {isAuthenticated && user ? (
-            <>
-              <span className="text-sm font-medium text-primary-foreground/90">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-primary-foreground/90 max-w-[120px] truncate">
                 Bonjour, {user.full_name || user.username}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={logout}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                className="h-10 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2.5"
               >
                 Déconnexion
               </Button>
-            </>
+            </div>
           ) : (
             <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10">
+              <Button variant="ghost" size="sm" className="h-10 text-sm text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 px-3">
                 <User className="w-4 h-4 mr-2" />
                 Se connecter
               </Button>
             </Link>
           )}
           <Link to="/ajouter-annonce">
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md">
+            <Button size="sm" className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md px-4">
               <Plus className="w-4 h-4 mr-2" />
               Ajouter une annonce
             </Button>
@@ -100,7 +109,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden text-primary-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
+        <button className="xl:hidden text-primary-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>

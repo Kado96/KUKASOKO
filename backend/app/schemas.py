@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from app.models import UserRole, ListingStatus
@@ -70,7 +70,7 @@ class CategoryOut(BaseModel):
 
 
 class CategoryTreeOut(CategoryOut):
-    children: List["CategoryTreeOut"] = []
+    children: List["CategoryTreeOut"] = Field(default_factory=list)
 
 
 class CategoryCreate(BaseModel):
@@ -266,6 +266,120 @@ class DeliverySessionOut(BaseModel):
     driver_lng: Optional[float]
     status: str
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+from decimal import Decimal
+
+# ─── Subscription & Payment ──────────────────────────────────────────────────
+
+class SubscriptionPlanOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: Optional[str]
+    price: Decimal
+    currency: str
+    duration_days: int
+    max_listings: int
+    featured_listings: bool
+    advanced_analytics: bool
+    marketing_tools: bool
+    notif_message_contact: bool
+    notif_weekly_report: bool
+    notif_listing_views: bool
+    notif_new_review: bool
+    notif_daily_ai_report: bool
+    notif_anomaly_alert: bool
+    notif_ai_recommendations: bool
+    email_notifications: bool
+    whatsapp_notifications: bool
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class SubscriptionPlanUpdateRules(BaseModel):
+    notif_message_contact: bool
+    notif_weekly_report: bool
+    notif_listing_views: bool
+    notif_new_review: bool
+    notif_daily_ai_report: bool
+    notif_anomaly_alert: bool
+    notif_ai_recommendations: bool
+    email_notifications: bool
+    whatsapp_notifications: bool
+
+
+class SubscriptionCreate(BaseModel):
+    plan_code: str
+    whatsapp_number: Optional[str] = None
+
+
+class SubscriptionUpdatePreferences(BaseModel):
+    whatsapp_number: Optional[str] = None
+
+
+class SubscriptionOut(BaseModel):
+    id: int
+    user_id: int
+    plan_id: int
+    status: str
+    starts_at: datetime
+    ends_at: Optional[datetime]
+    auto_renew: bool
+    whatsapp_number: Optional[str]
+    created_at: datetime
+    plan: SubscriptionPlanOut
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentCreate(BaseModel):
+    plan_code: str
+    payment_method: str  # afri_pay, paypal, manual
+
+
+class PaymentOut(BaseModel):
+    id: int
+    user_id: int
+    subscription_id: Optional[int]
+    amount: Decimal
+    currency: str
+    provider: str
+    transaction_id: Optional[str]
+    status: str
+    payment_method: Optional[str]
+    created_at: datetime
+    confirmed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationOut(BaseModel):
+    id: int
+    user_id: int
+    type: str
+    title: str
+    message: str
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AIReportOut(BaseModel):
+    id: int
+    report_type: str
+    content_json: str
+    generated_at: datetime
+    sent_to_count: int
 
     class Config:
         from_attributes = True

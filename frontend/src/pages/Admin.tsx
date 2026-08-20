@@ -813,10 +813,10 @@ const Admin = () => {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-xl border border-border p-3 space-y-1 sticky top-24">
+              <div className="bg-card rounded-xl border border-border p-3 flex lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 lg:gap-1 sticky top-24 no-scrollbar">
                 {tabs.map((tab) => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 ${
                       activeTab === tab.id ? "bg-accent text-accent-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}>
                     {tab.icon} {tab.label}
@@ -826,7 +826,7 @@ const Admin = () => {
             </div>
 
             {/* Content */}
-            <div className="lg:col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-6 overflow-hidden">
 
               {/* ─── DASHBOARD ─── */}
               {activeTab === "dashboard" && (
@@ -1629,6 +1629,8 @@ const Admin = () => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <input
+                        id="admin-category-name"
+                        name="admin_category_name"
                         type="text"
                         placeholder="Nom *"
                         value={catForm.name}
@@ -1636,6 +1638,8 @@ const Admin = () => {
                         className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <input
+                        id="admin-category-icon"
+                        name="admin_category_icon"
                         type="text"
                         placeholder="Icône (emoji)"
                         value={catForm.icon}
@@ -1643,6 +1647,8 @@ const Admin = () => {
                         className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <select
+                        id="admin-category-parent"
+                        name="admin_category_parent"
                         value={catForm.parent_id}
                         onChange={(e) => setCatForm({ ...catForm, parent_id: e.target.value })}
                         className="h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
@@ -1654,7 +1660,7 @@ const Admin = () => {
                           </option>
                         ))}
                       </select>
-                      <Button onClick={handleCreateCategory} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                      <Button id="admin-create-category" name="admin_create_category" onClick={handleCreateCategory} className="bg-accent text-accent-foreground hover:bg-accent/90">
                         <Plus className="w-4 h-4 mr-1" /> Ajouter
                       </Button>
                     </div>

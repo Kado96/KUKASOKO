@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Enum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -227,3 +227,108 @@ class MediaFile(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SubscriptionPlan(Base):
+    __tablename__ = "subscription_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+
+    price = Column(Numeric(12, 2), nullable=False, default=0)
+    currency = Column(String, nullable=False, default="BIF")
+    duration_days = Column(Integer, nullable=False, default=30)
+
+    # Limites
+    max_listings = Column(Integer, nullable=False, default=5)
+    featured_listings = Column(Boolean, nullable=False, default=False)
+    advanced_analytics = Column(Boolean, nullable=False, default=False)
+    marketing_tools = Column(Boolean, nullable=False, default=False)
+
+    # Règles de notifications
+    notif_message_contact = Column(Boolean, nullable=False, default=True)
+    notif_weekly_report = Column(Boolean, nullable=False, default=False)
+    notif_listing_views = Column(Boolean, nullable=False, default=False)
+    notif_new_review = Column(Boolean, nullable=False, default=False)
+    notif_daily_ai_report = Column(Boolean, nullable=False, default=False)
+    notif_anomaly_alert = Column(Boolean, nullable=False, default=False)
+    notif_ai_recommendations = Column(Boolean, nullable=False, default=False)
+
+    # Canaux
+    email_notifications = Column(Boolean, nullable=False, default=False)
+    whatsapp_notifications = Column(Boolean, nullable=False, default=False)
+
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
+
+    status = Column(String, nullable=False, default="active")  # active, expired, cancelled, pending
+    starts_at = Column(DateTime, nullable=False)
+    ends_at = Column(DateTime, nullable=True)
+    auto_renew = Column(Boolean, nullable=False, default=False)
+
+    # Préférences de notification de l'abonné
+    whatsapp_number = Column(String, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    user = relationship("User")
+    plan = relationship("SubscriptionPlan")
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=True)
+
+    amount = Column(Numeric(12, 2), nullable=False)
+    currency = Column(String, nullable=False, default="BIF")
+    provider = Column(String, nullable=False, default="pending")  # pending, afri_pay, paypal, manual
+    transaction_id = Column(String, unique=True, nullable=True, index=True)
+    status = Column(String, nullable=False, default="pending")  # pending, success, failed, cancelled, refunded
+    payment_method = Column(String, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    confirmed_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+    subscription = relationship("Subscription")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    type = Column(String, nullable=False)  # message_contact, weekly_report, listing_views, new_review, daily_ai_report, anomaly_alert, ai_recommendations
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
+
+class AIReport(Base):
+    __tablename__ = "ai_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_type = Column(String, nullable=False)  # daily_summary, market_insights
+    content_json = Column(Text, nullable=False)  # Contenu structuré
+    generated_at = Column(DateTime(timezone=True), server_default=func.now())
+    sent_to_count = Column(Integer, default=0)
+

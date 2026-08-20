@@ -39,6 +39,7 @@ const baseSelectClass =
 /** Wrapper stylisé autour d'un <select> natif */
 function NativeSelect({
   id,
+  name,
   value,
   onChange,
   disabled,
@@ -47,6 +48,7 @@ function NativeSelect({
   placeholder,
 }: {
   id: string;
+  name: string;
   value: string;
   onChange: (v: string) => void;
   disabled?: boolean;
@@ -58,6 +60,7 @@ function NativeSelect({
     <div className={cn("relative w-full", className)}>
       <select
         id={id}
+        name={name}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
@@ -134,6 +137,7 @@ export function CategorySearchFilters({
       <div className={wrapperClass}>
         <NativeSelect
           id={catId}
+          name="listing_category_filter"
           value={category}
           onChange={onCategoryChange}
           placeholder="Toutes les catégories"
@@ -172,6 +176,7 @@ export function CategorySearchFilters({
       <div className={wrapperClass}>
         <NativeSelect
           id={subId}
+          name="listing_subcategory_filter"
           value={subEnabled ? subCategory : "all"}
           onChange={onSubCategoryChange}
           disabled={!subEnabled}

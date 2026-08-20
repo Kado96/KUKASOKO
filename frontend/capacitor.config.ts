@@ -22,6 +22,11 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     },
+    LocalNotifications: {
+      smallIcon: "ic_stat_notification",
+      iconColor: "#febb2d",
+      sound: "notification.wav",
+    },
   },
 };
 

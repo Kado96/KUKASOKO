@@ -9,7 +9,7 @@ import os
 import logging
 
 from app.database import engine, Base
-from app.api import auth, users, listings, messages, merchants, map_routes, reviews, media
+from app.api import auth, users, listings, messages, merchants, map_routes, reviews, media, subscriptions, payments, notifications, analytics
 from app.websocket import router as ws_router
 from sqlalchemy import text, inspect
 
@@ -161,6 +161,10 @@ app.include_router(merchants.router, prefix="/api/merchants", tags=["Merchants"]
 app.include_router(map_routes.router, prefix="/api/map", tags=["Map"])
 app.include_router(reviews.router, prefix="/api/listings", tags=["Reviews"])
 app.include_router(media.router, prefix="/api/media", tags=["Media"])
+app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["Subscriptions"])
+app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(ws_router, prefix="/ws", tags=["WebSockets"])
 
 

@@ -8,7 +8,7 @@ import {
   Store, MapPin, Phone, ImagePlus, Clock, CheckCircle2,
   Edit, Trash2, Plus, Navigation, Loader2, Send, MessageCircle,
   Search, Paperclip, Eye, Package, Star, ShoppingBag,
-  ArrowRight, LayoutGrid, X, Lock, AlertCircle, Save, Camera
+  ArrowRight, LayoutGrid, X, Lock, AlertCircle, Save, Camera, Brain
 } from "lucide-react";
 import LocationMap from "@/components/LocationMap";
 import { toast } from "@/hooks/use-toast";
@@ -19,6 +19,8 @@ import { merchantsAPI, messagesAPI, listingsAPI, mediaAPI, API_BASE } from "@/se
 import { useChatWebSocket } from "@/hooks/useWebSocket";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { Link, useNavigate } from "react-router-dom";
+import SellerCoachPanel from "@/components/SellerCoachPanel";
+
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface ChatMessage {
@@ -359,9 +361,10 @@ interface ListingCardProps {
   isMerchant: boolean;
   onDelete: () => void;
   onEdit: (listing: any) => void;
+  onFeature?: () => void;
 }
 
-const ListingCard = ({ listing, isMerchant, onDelete, onEdit }: ListingCardProps) => {
+const ListingCard = ({ listing, isMerchant, onDelete, onEdit, onFeature }: ListingCardProps) => {
   const now = Date.now();
 
   // Compte à rebours expiration 24h (clients sans boutique)
@@ -468,11 +471,31 @@ const ListingCard = ({ listing, isMerchant, onDelete, onEdit }: ListingCardProps
             ) : null}
           </div>
         )}
-        <div className="mt-auto flex items-center justify-between">
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3">
           <span className="text-[#c8911f] font-bold text-base">{listing.price}</span>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Eye className="w-3 h-3" />
-            <span>{listing.views ?? 0} vues</span>
+          <div className="flex items-center gap-2">
+            {listing.is_featured ? (
+              <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">
+                ⭐ VIP
+              </span>
+            ) : (
+              onFeature && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onFeature();
+                  }}
+                  className="text-[10px] bg-indigo-500 text-white font-bold px-2.5 py-1 rounded-full shadow-sm hover:bg-indigo-600 transition-colors"
+                >
+                  🚀 Booster VIP
+                </button>
+              )
+            )}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Eye className="w-3.5 h-3.5" />
+              <span>{listing.views ?? 0}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -489,6 +512,9 @@ const MaBoutique = () => {
   const [myListings, setMyListings] = useState<any[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"annonces" | "messages" | "stats">("annonces");
+  const [coachAdvice, setCoachAdvice] = useState<string>("");
+  const [coachStats, setCoachStats] = useState<any>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
   const [form, setForm] = useState({
     name: "", description: "", category: "",
     address: "", phone: "", website: "",
@@ -619,6 +645,20 @@ const MaBoutique = () => {
         }
       })
       .catch(() => {});
+
+    // Charger les conseils du Coach IA
+    setCoachLoading(true);
+    import("@/services/api").then(({ api }) => {
+      api.get("/api/analytics/coach/tips")
+        .then((res) => {
+          setCoachAdvice(res.data.coach_advice);
+          setCoachStats(res.data.stats);
+        })
+        .catch(() => {
+          setCoachAdvice("Bienvenue dans votre boutique ! Boostez vos annonces pour obtenir des ventes rapidement.");
+        })
+        .finally(() => setCoachLoading(false));
+    });
   }, [isAuthenticated, user, fetchMyListings]);
 
   const uploadShopImage = async (file: File, field: "logo" | "cover") => {
@@ -830,34 +870,23 @@ const MaBoutique = () => {
     }
   };
 
-  // Soumission des modifications de l'annonce
-  const handleUpdateListing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingListing) return;
-    if (!editForm.title || !editForm.categoryId || !editForm.description) {
-      toast({ title: "Champs requis", description: "Veuillez remplir le titre, la catégorie et la description.", variant: "destructive" });
-      return;
-    }
-    setEditSubmitting(true);
+  // Mettre en avant une annonce (VIP Boost payant)
+  const handleFeatureListing = async (listingId: number) => {
+    if (!confirm("Voulez-vous booster cette annonce et la placer en VIP pour 5 000 BIF ?")) return;
     try {
-      await listingsAPI.update(editingListing.id, {
-        title: editForm.title,
-        description: editForm.description,
-        price: editForm.price ? parseFloat(editForm.price) : 0,
-        category_id: Number(editForm.categoryId),
-        image_urls: editForm.images.join(","),
+      const { api } = await import("@/services/api");
+      const res = await api.post(`/api/listings/${listingId}/feature`);
+      toast({
+        title: "Boost activé ! 🚀",
+        description: res.data.message || "Votre annonce est désormais en tête de liste.",
       });
-      toast({ title: "Annonce mise à jour ! ✨" });
-      setEditingListing(null);
       fetchMyListings();
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err?.response?.data?.detail || "Impossible de modifier l'annonce.",
+        description: err?.response?.data?.detail || "Échec de l'activation du boost.",
         variant: "destructive"
       });
-    } finally {
-      setEditSubmitting(false);
     }
   };
 
@@ -1182,6 +1211,12 @@ const MaBoutique = () => {
             </div>
           )}
 
+          {/* ── Mon Compagnon Coach IA KUKASOKO ── */}
+          <SellerCoachPanel
+            token={localStorage.getItem("kukasoko_token") ?? ""}
+            userName={user?.full_name || user?.username || "vous"}
+          />
+
           {/* Navigation Tabs */}
           <div className="flex items-center gap-1 bg-secondary/50 rounded-2xl p-1 mb-8 border border-border w-fit">
             {[
@@ -1249,6 +1284,7 @@ const MaBoutique = () => {
                       isMerchant={hasShop}
                       onDelete={() => handleDeleteListing(listing.id)}
                       onEdit={openEditModal}
+                      onFeature={() => handleFeatureListing(listing.id)}
                     />
                   ))}
                   {/* Ajouter Card */}

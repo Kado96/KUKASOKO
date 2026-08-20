@@ -134,7 +134,7 @@ export default function Carte() {
         setListings(mock);
       })
       .finally(() => setListingsLoading(false));
-  }, [activeCategoryId]);
+  }, [activeCategoryId, categoryTree, selectedCategory, selectedSubCategory]);
 
   // Init map once with popup autoplay cycle
   useEffect(() => {

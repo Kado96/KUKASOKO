@@ -1,4 +1,4 @@
-﻿import axios from "axios";
+import axios from "axios";
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -113,6 +113,15 @@ export const listingsAPI = {
     }
   ) => api.patch(`/api/listings/categories/${id}`, data),
   deleteCategory: (id: number) => api.delete(`/api/listings/categories/${id}`),
+
+  // ─── Mise en avant (Boost) ──────────────────────────────────────────────────
+  /** Payer pour mettre une annonce en avant (5 000 BIF) */
+  boostListing: (listingId: number, paymentMethod = "afripay") =>
+    api.post(`/api/listings/${listingId}/feature`, { payment_method: paymentMethod }),
+
+  /** Désactiver la mise en avant d'une annonce (admin) */
+  unboostListing: (listingId: number) =>
+    api.patch(`/api/listings/${listingId}`, { is_featured: false }),
 };
 
 // ─── Merchants ───────────────────────────────────────────────────────────────

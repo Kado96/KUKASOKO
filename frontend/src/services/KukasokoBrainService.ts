@@ -247,7 +247,7 @@ class KukasokoBrainService {
             title: c.name_fr || c.name,
             body: [c.name_fr, c.name].filter(Boolean).join(" "),
             category: c.name_fr || c.name,
-            url: `/annonces?category_id=${c.id}`,
+            url: `/annonces?category=${c.id}`,
           });
         }
       }

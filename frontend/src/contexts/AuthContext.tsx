@@ -1,5 +1,7 @@
-﻿import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authAPI, usersAPI, messagesAPI } from "@/services/api";
+import { NotificationService } from "@/services/NotificationService";
+
 
 interface User {
   id: number;
@@ -65,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sync PWA / Mobile app badge with unread messages count
   useEffect(() => {
+    // PWA (navigator.setAppBadge)
     if ('setAppBadge' in navigator) {
       if (unreadCount > 0) {
         (navigator as any).setAppBadge(unreadCount).catch(() => {});
@@ -72,25 +75,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         (navigator as any).clearAppBadge().catch(() => {});
       }
     }
+    // Native Capacitor badge (Android / iOS)
+    NotificationService.setBadge(unreadCount);
   }, [unreadCount]);
 
   // Periodic poll of unread messages count
   useEffect(() => {
     if (!user) {
       setUnreadCount(0);
+      NotificationService.clearBadge();
       return;
     }
+
+    // Initialiser les notifications natives au premier login
+    NotificationService.init();
 
     const fetchUnread = () => {
       messagesAPI.getConversations()
         .then((res) => {
-          const apiConvs = res.data as Array<{ unread_count: number }>;
+          const apiConvs = res.data as Array<{ unread_count: number; partner_name?: string; last_message?: string }>;
           const totalUnread = apiConvs.reduce((sum, c) => sum + c.unread_count, 0);
           
           setUnreadCount((prev) => {
-            // Play notification sound if unread count goes up
             if (totalUnread > prev) {
+              // Son de notification
               playNotificationSound();
+              // Notification locale native (Capacitor) pour chaque nouvelle conversation
+              const newConvs = apiConvs.filter((c) => c.unread_count > 0);
+              if (newConvs.length > 0) {
+                const conv = newConvs[0];
+                NotificationService.notifyNewMessage(
+                  conv.partner_name ?? "Un utilisateur",
+                  conv.last_message ?? "Nouveau message"
+                );
+              }
             }
             return totalUnread;
           });

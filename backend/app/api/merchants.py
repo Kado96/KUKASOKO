@@ -14,6 +14,21 @@ def list_merchants(skip: int = 0, limit: int = 30, db: Session = Depends(get_db)
     return db.query(models.MerchantProfile).offset(skip).limit(limit).all()
 
 
+@router.get("/me", response_model=schemas.MerchantProfileOut)
+def get_my_merchant_profile(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Récupère le profil marchand de l'utilisateur connecté."""
+    profile = db.query(models.MerchantProfile).filter(
+        models.MerchantProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profil marchand introuvable")
+    return profile
+
+
+
 @router.get("/{merchant_id}", response_model=schemas.MerchantProfileOut)
 def get_merchant(merchant_id: int, db: Session = Depends(get_db)):
     """Page publique d'un marchand : profil + boutique."""

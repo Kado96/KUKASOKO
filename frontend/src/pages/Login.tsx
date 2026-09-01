@@ -1,5 +1,6 @@
-﻿import Navbar from "@/components/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -64,19 +65,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-16">
-        <div className="bg-primary py-12">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-display font-bold text-primary-foreground mb-2">
-              {isLogin ? "Se connecter" : "Créer un compte"}
-            </h1>
-            <p className="text-primary-foreground/70">
-              {isLogin ? "Accédez à votre compte Kukasoko" : "Rejoignez la communauté Kukasoko"}
-            </p>
-          </div>
-        </div>
+      <main className="flex-grow pt-16">
+        <PageHero
+          title={isLogin ? "Connexion à votre compte" : "Créer un compte Kukasoko"}
+          subtitle={isLogin ? "Accédez à votre espace vendeur, gérez vos annonces et interagissez avec les acheteurs." : "Rejoignez la plus grande communauté d'acheteurs et vendeurs géolocalisés au Burundi."}
+          showSearch={false}
+          compact={true}
+        />
 
         <div className="container mx-auto px-4 py-12 max-w-md">
           <div className="bg-card rounded-xl border border-border p-8 shadow-md">

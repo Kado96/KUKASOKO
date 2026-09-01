@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -363,24 +364,15 @@ const AjouterAnnonce = () => {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-16">
-        {/* Hero */}
-        <div className="bg-primary py-12">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-display font-bold text-primary-foreground mb-2">
-              Ajouter une annonce
-            </h1>
-            <p className="text-primary-foreground/70">
-              {isGuest
-                ? "Publiez gratuitement sans créer de compte — votre annonce est active 24h"
-                : isMerchant
-                ? "Publiez autant d'annonces que vous souhaitez"
-                : "1 annonce gratuite valable 24 heures"}
-            </p>
-          </div>
-        </div>
+      <main className="flex-grow pt-16">
+        <PageHero
+          title="Publier une annonce"
+          subtitle="Vendez vos biens, proposez vos services et atteignez instantanément des milliers d'acheteurs à Bujumbura et partout au Burundi."
+          showSearch={false}
+          compact={true}
+        />
 
         <div className="container mx-auto px-4 py-10 max-w-2xl">
 

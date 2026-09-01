@@ -1,0 +1,48 @@
+---
+description: Persistent memory for the KUKASOKO project and Donald's preferred Codex workflow
+alwaysApply: true
+---
+
+# KUKASOKO Project Memory
+
+Donald wants Codex to continue work from previous discussions, not restart from scratch.
+
+Before important work in this repo:
+
+- Consult `C:\Users\Donald\.codex\skills\auto-skill-manager\SKILL.md`.
+- Use the matching imported skill when relevant.
+- Prefer `autonomous-fullstack-developer` for full-stack implementation work.
+- Use `strict-naming-conventions` for React, HTML, forms, variables, IDs, and names.
+- Preserve user changes in the dirty worktree.
+
+Current project direction:
+
+- KUKASOKO is a FastAPI + SQLAlchemy backend and React/TypeScript frontend marketplace.
+- Main active stabilization target: categories and subcategories across backend, admin, listing filters, map filters, add-listing forms, hero search, and category sections.
+- Secondary active work exists for subscriptions, payments, notifications, analytics, admin dashboard, and mobile integration, but do not mix those into the category stabilization unless required for build/import errors.
+
+Current category/subcategory state:
+
+- `backend/app/models.py` has `Category.parent_id`, `parent`, `children`, and `Listing.category_id`.
+- `backend/app/schemas.py` has `CategoryOut`, `CategoryTreeOut`, `CategoryCreate`, and `CategoryUpdate`.
+- `backend/app/api/listings.py` has category CRUD and tree/list endpoints under `/api/listings/categories`.
+- Category filtering should include a parent category and its direct subcategories.
+- Admin has a `categories` tab for creating, editing, and deleting categories/subcategories.
+- Frontend uses `CategorySearchFilters` for shared parent/subcategory selection.
+
+Last category stabilization actions performed:
+
+- Moved category routes in `backend/app/api/listings.py` before `/{listing_id}` so `/categories/...` is not captured as a listing id.
+- Removed the duplicated lower category route block after `delete_listing`.
+- Changed `CategoryTreeOut.children` to `Field(default_factory=list)` in `backend/app/schemas.py`.
+
+Next steps to continue:
+
+- Verify `backend/app/api/listings.py` route order and encoding after edits.
+- Update `frontend/src/components/CategoriesSection.tsx` to load real category tree instead of hardcoded category links.
+- Make URL query params consistent: prefer `category=<id>` or `category_id=<id>` everywhere, then normalize `Annonces`, `HeroSection`, `CategoriesSection`, `KukasokoBrainService`, and map flows.
+- Fix Admin category form controls to include stable `id` and `name` attributes.
+- Fix `CategorySearchFilters.NativeSelect` to include `name`.
+- Check `Carte.tsx` effect dependencies for category tree/subcategory filtering.
+- Review Alembic migrations so `ix_categories_parent_id` is not created twice.
+- Run backend import/check and frontend build after fixes.

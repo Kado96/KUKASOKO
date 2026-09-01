@@ -1,0 +1,20 @@
+---
+description: Use Donald's global skill manager before choosing a workflow
+alwaysApply: true
+---
+
+# Global Skill Manager
+
+Before working on a user request in this project, check whether the request matches an existing global skill in:
+
+`C:\Users\Donald\.gemini\config\plugins\my-global-skills\skills\`
+
+Also consult the manager index when the task is broad, strategic, repetitive, or looks like a known workflow:
+
+`C:\Users\Donald\.gemini\config\plugins\my-global-skills\rules\auto-skill-manager.md`
+
+Use the matching `SKILL.md` as guidance before acting when it fits the user's request.
+
+Do not create a new global skill automatically for every task. Create or update a skill only when the user asks for it, or when a reusable workflow has clearly emerged and the user approves.
+
+When editing code, still follow the current project's architecture, tests, safety rules, and Git hygiene.

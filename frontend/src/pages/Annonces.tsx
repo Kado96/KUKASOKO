@@ -132,6 +132,31 @@ const Annonces = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // BM25 search — déclenche après 400ms d'inactivité
+  const runBrainSearch = useCallback((q: string) => {
+    if (brainTimer.current) clearTimeout(brainTimer.current);
+    if (!q.trim() || q.trim().length < 2) {
+      setBrainResults(null);
+      return;
+    }
+    brainTimer.current = setTimeout(async () => {
+      setBrainLoading(true);
+      try {
+        if (!brainReady) await kukasokoBrain.load();
+        const items = kukasokoBrain.search(q.trim(), ["listing"], 30);
+        if (items.length > 0) {
+          setBrainResults(items.map((item, i) => brainItemToDisplay(item, i)));
+        } else {
+          setBrainResults(null); // pas de résultat BM25 → fallback filtre texte
+        }
+      } catch {
+        setBrainResults(null);
+      } finally {
+        setBrainLoading(false);
+      }
+    }, 400);
+  }, [brainReady]);
+
   // Synchronise les filtres avec les paramètres d'URL (search, category, subcategory)
   useEffect(() => {
     const q = searchParams.get("search");
@@ -174,31 +199,6 @@ const Annonces = () => {
     }
     setFilterCat(cat);
   }, [searchParams, tree, runBrainSearch]);
-
-  // BM25 search — déclenche après 400ms d'inactivité
-  const runBrainSearch = useCallback((q: string) => {
-    if (brainTimer.current) clearTimeout(brainTimer.current);
-    if (!q.trim() || q.trim().length < 2) {
-      setBrainResults(null);
-      return;
-    }
-    brainTimer.current = setTimeout(async () => {
-      setBrainLoading(true);
-      try {
-        if (!brainReady) await kukasokoBrain.load();
-        const items = kukasokoBrain.search(q.trim(), ["listing"], 30);
-        if (items.length > 0) {
-          setBrainResults(items.map((item, i) => brainItemToDisplay(item, i)));
-        } else {
-          setBrainResults(null); // pas de résultat BM25 → fallback filtre texte
-        }
-      } catch {
-        setBrainResults(null);
-      } finally {
-        setBrainLoading(false);
-      }
-    }, 400);
-  }, [brainReady]);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);

@@ -258,11 +258,14 @@ export default function PageHero({
               <div className="flex-1 flex items-center px-3 py-2 sm:py-0">
                 <Search className="w-5 h-5 text-muted-foreground mr-2 shrink-0" />
                 <input
+                  id="hero-search"
+                  name="hero-search"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   placeholder="Mots-clés..."
+                  autoComplete="off"
                   className="w-full bg-transparent border-none text-foreground placeholder:text-muted-foreground focus:outline-none text-sm"
                 />
               </div>

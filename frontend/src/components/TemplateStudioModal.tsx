@@ -212,6 +212,8 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                       <label className="text-xs text-muted-foreground w-28 shrink-0">Couleur principale :</label>
                       <div className="flex items-center gap-2">
                         <input
+                          id="template-accent-color"
+                          name="template-accent-color"
                           type="color"
                           value={accentColor}
                           onChange={(e) => setAccentColor(e.target.value)}
@@ -240,10 +242,13 @@ export const TemplateStudioModal: React.FC<TemplateStudioModalProps> = ({
                     <div className="flex items-center gap-3">
                       <label className="text-xs text-muted-foreground w-28 shrink-0">Texte sur la photo :</label>
                       <input
+                        id="template-custom-text"
+                        name="template-custom-text"
                         type="text"
                         value={customText}
                         onChange={(e) => setCustomText(e.target.value)}
                         placeholder="Ex : Disponible ce weekend !"
+                        autoComplete="off"
                         className="flex-1 h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
                         maxLength={60}
                       />

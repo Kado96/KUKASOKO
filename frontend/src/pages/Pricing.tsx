@@ -187,8 +187,10 @@ export default function Pricing() {
                       <Phone size={14} />
                       <input
                         id={`whatsapp-${plan.code}`}
+                        name={`whatsapp-${plan.code}`}
                         type="tel"
                         placeholder="+257 XX XXX XXX"
+                        autoComplete="tel"
                         value={whatsapp}
                         onChange={(e) => setWhatsapp(e.target.value)}
                       />

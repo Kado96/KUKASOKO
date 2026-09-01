@@ -87,6 +87,7 @@ def get_current_user_optional(
 
 @router.post("/upload", response_model=MediaFileOut)
 async def upload_media(
+    request: Request,
     file: UploadFile = File(...),
     category: str = Query("library", description="listing | merchant | avatar | banner | library"),
     listing_id: Optional[int] = Query(None),
@@ -129,8 +130,9 @@ async def upload_media(
     # Chemin relatif pour l'URL (ex: media/listing/abc.jpg)
     rel_path = f"media/{category}/{unique_name}"
 
-    # URL publique (backend la sert via StaticFiles sur /media)
-    public_url = f"http://localhost:8000/{rel_path}"
+    # URL publique — construite depuis la requête pour éviter le CORB cross-origin
+    base_url = str(request.base_url).rstrip("/")
+    public_url = f"{base_url}/{rel_path}"
 
     # Enregistrement en base de données
     media_record = models.MediaFile(

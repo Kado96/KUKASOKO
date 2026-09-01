@@ -70,6 +70,8 @@ export const listingsAPI = {
     limit?: number;
   }) => api.get("/api/listings/", { params }),
 
+  getFeaturedSlides: () => api.get("/api/listings/featured"),
+
   getForMap: (category_id?: number) =>
     api.get("/api/listings/map", { params: category_id ? { category_id } : {} }),
 

@@ -66,6 +66,61 @@ async def upload_to_supabase(file: UploadFile, category: str = "listing") -> str
 
 
 
+@router.get("/featured")
+def get_featured_slides(db: Session = Depends(get_db)):
+    """
+    Récupère la liste dynamique des diapositives sponsorisées/mises en avant
+    pour le carrousel HD principal.
+    Prend en priorité les annonces sponsorisées (is_featured=True) et les bannières
+    des marchands PRO/BUSINESS.
+    """
+    slides = []
+
+    # 1. Annonces Premium / Mises en avant par les abonnés PRO / BUSINESS
+    featured_listings = (
+        db.query(models.Listing)
+        .filter(models.Listing.status == models.ListingStatus.active, models.Listing.is_featured == True)
+        .order_by(models.Listing.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    for l in featured_listings:
+        img_url = l.image_urls.split(",")[0] if l.image_urls else None
+        if img_url:
+            slides.append({
+                "id": f"listing-{l.id}",
+                "type": "listing",
+                "title": l.title,
+                "subtitle": f"{l.price:,.0f} {l.currency or 'BIF'} • {l.city or 'Bujumbura'}",
+                "image": img_url if img_url.startswith("http") else f"/media/{img_url.lstrip('/')}",
+                "link": f"/annonces/{l.id}",
+                "badge": "⭐ Sponsoring Premium"
+            })
+
+    # 2. Boutiques Premium / PRO
+    pro_merchants = (
+        db.query(models.MerchantProfile)
+        .filter(models.MerchantProfile.subscription_pack.in_(["Premium", "Pro", "PRO", "BUSINESS"]))
+        .limit(5)
+        .all()
+    )
+
+    for m in pro_merchants:
+        if m.banner_url or m.logo_url:
+            slides.append({
+                "id": f"merchant-{m.id}",
+                "type": "merchant",
+                "title": m.shop_name,
+                "subtitle": m.shop_description or "Boutique Officielle Certifiée sur Kukasoko",
+                "image": m.banner_url or m.logo_url,
+                "link": f"/marchand/{m.id}",
+                "badge": "🚀 Boutique Officielle"
+            })
+
+    return slides
+
+
 @router.get("/", response_model=List[schemas.ListingOut])
 def get_listings(
     category_id: Optional[int] = Query(None),

@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 import categoryImmobilier from "@/assets/category-immobilier.jpg";
 import categoryServices from "@/assets/category-services.jpg";
@@ -14,7 +14,21 @@ import {
 } from "@/components/CategorySearchFilters";
 
 const INTERVAL_MS = 5500;
-const FALLBACK_SLIDES = [heroBg, categoryImmobilier, categoryServices, categoryAvendre];
+const FALLBACK_SLIDES = [
+  { id: "f1", image: heroBg, title: null, subtitle: null, link: null, badge: null },
+  { id: "f2", image: categoryImmobilier, title: null, subtitle: null, link: null, badge: null },
+  { id: "f3", image: categoryServices, title: null, subtitle: null, link: null, badge: null },
+  { id: "f4", image: categoryAvendre, title: null, subtitle: null, link: null, badge: null }
+];
+
+interface SlideItem {
+  id: string;
+  image: string;
+  title?: string | null;
+  subtitle?: string | null;
+  link?: string | null;
+  badge?: string | null;
+}
 
 interface PageHeroProps {
   title?: string;
@@ -35,16 +49,32 @@ export default function PageHero({
   const [subCategory, setSubCategory] = useState("all");
   const [tree, setTree] = useState<CatNode[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [dynamicSlides, setDynamicSlides] = useState<SlideItem[]>([]);
   const { settings } = useSite();
 
-  const slides =
+  // Charger dynamiquement les annonces/boutiques sponsorisées payantes pour le carrousel
+  useEffect(() => {
+    listingsAPI
+      .getFeaturedSlides()
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setDynamicSlides(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const baseSlides: SlideItem[] =
     settings.heroImages?.length > 0
-      ? settings.heroImages
+      ? settings.heroImages.map((src: string, idx: number) => ({ id: `site-${idx}`, image: src }))
       : settings.heroImage
-        ? [settings.heroImage]
+        ? [{ id: "site-0", image: settings.heroImage }]
         : FALLBACK_SLIDES;
 
-  const slidesKey = slides.join("|");
+  const slides: SlideItem[] = dynamicSlides.length > 0 ? [...dynamicSlides, ...baseSlides] : baseSlides;
+  const currentSlide = slides[activeIndex] || slides[0];
+
+  const slidesKey = slides.map(s => s.image).join("|");
   const hasMultiple = slides.length > 1;
 
   useEffect(() => {
@@ -87,20 +117,20 @@ export default function PageHero({
     navigate(`/annonces${params.toString() ? `?${params}` : ""}`);
   };
 
-  const displayTitle = title || settings.heroTitle || "Trouvez tout ce dont vous avez besoin.";
-  const displaySubtitle = subtitle || settings.heroSubtitle || "Recherchez des propriétés, des services et des articles à vendre sur un seul site.";
+  const displayTitle = currentSlide?.title || title || settings.heroTitle || "Trouvez tout ce dont vous avez besoin.";
+  const displaySubtitle = currentSlide?.subtitle || subtitle || settings.heroSubtitle || "Recherchez des propriétés, des services et des articles à vendre sur un seul site.";
 
   return (
-    <section className={`relative ${compact ? "min-h-[340px] sm:min-h-[380px]" : "min-h-[520px] sm:min-h-[560px]"} flex items-center justify-center overflow-hidden pb-8 sm:pb-0`}>
+    <section className={`relative ${compact ? "min-h-[340px] sm:min-h-[400px]" : "min-h-[520px] sm:min-h-[580px]"} flex items-center justify-center overflow-hidden pb-8 sm:pb-0`}>
       {/* ── Carrousel d'arrière-plan haute définition ── */}
       <div className="absolute inset-0 z-0" aria-hidden="true">
-        {slides.map((src, i) => (
+        {slides.map((item, i) => (
           <div
-            key={`${src}-${i}`}
+            key={`${item.image}-${i}`}
             className="absolute inset-0 transition-opacity duration-[1200ms] ease-in-out"
             style={{ opacity: i === activeIndex ? 1 : 0 }}
           >
-            <img src={src} alt="" className="h-full w-full object-cover object-center" draggable={false} />
+            <img src={item.image} alt="" className="h-full w-full object-cover object-center" draggable={false} />
           </div>
         ))}
       </div>
@@ -110,7 +140,7 @@ export default function PageHero({
         className="absolute inset-0 z-[1] pointer-events-none"
         style={{
           background:
-            "linear-gradient(180deg, rgba(26, 34, 54, 0.75) 0%, rgba(26, 34, 54, 0.55) 50%, rgba(26, 34, 54, 0.85) 100%)",
+            "linear-gradient(180deg, rgba(26, 34, 54, 0.78) 0%, rgba(26, 34, 54, 0.58) 50%, rgba(26, 34, 54, 0.88) 100%)",
         }}
       />
 
@@ -152,9 +182,18 @@ export default function PageHero({
 
       {/* ── Contenu Central ── */}
       <div className="relative z-10 container mx-auto px-4 text-center w-full max-w-3xl">
+        {/* Badge Sponsorisé pour les annonces/boutiques payantes */}
+        {currentSlide?.badge && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 text-xs font-semibold uppercase tracking-wider mb-3 animate-fade-in">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{currentSlide.badge}</span>
+          </div>
+        )}
+
         <h1 className={`${compact ? "text-2xl sm:text-3xl md:text-4xl" : "text-2xl sm:text-3xl md:text-5xl"} font-display font-bold text-white mb-3 sm:mb-4 animate-fade-in-up drop-shadow-md leading-tight px-1`}>
           {displayTitle}
         </h1>
+
         <p
           className="text-white/90 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 max-w-xl mx-auto drop-shadow-sm px-2"
           style={{
@@ -166,6 +205,19 @@ export default function PageHero({
         >
           {displaySubtitle}
         </p>
+
+        {/* Bouton d'action si le slide sponsorisé possède un lien */}
+        {currentSlide?.link && (
+          <div className="mb-6">
+            <Link
+              to={currentSlide.link}
+              className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold px-5 py-2.5 rounded-full text-sm shadow-lg transition-transform hover:scale-105"
+            >
+              <span>Découvrir l'offre</span>
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
 
         {/* Barre de recherche (si activée) */}
         {showSearch && (

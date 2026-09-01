@@ -141,10 +141,11 @@ class CORSStaticFiles(StaticFiles):
         async def cors_send(message):
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
-                headers = [h for h in headers if h[0].lower() != b"access-control-allow-origin"]
+                headers = [h for h in headers if h[0].lower() not in (b"access-control-allow-origin", b"cross-origin-resource-policy")]
                 headers.append((b"access-control-allow-origin", b"*"))
                 headers.append((b"access-control-allow-methods", b"GET, OPTIONS"))
                 headers.append((b"access-control-allow-headers", b"*"))
+                headers.append((b"cross-origin-resource-policy", b"cross-origin"))
                 message["headers"] = headers
             await send(message)
 

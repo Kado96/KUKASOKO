@@ -132,9 +132,19 @@ const Annonces = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Synchronise les filtres avec les paramètres d'URL
+  // Synchronise les filtres avec les paramètres d'URL (search, category, subcategory)
   useEffect(() => {
+    const q = searchParams.get("search");
+    if (q) {
+      setSearch(q);
+      runBrainSearch(q);
+    }
+
     const cat = searchParams.get("category") || searchParams.get("category_id");
+    const sub = searchParams.get("subcategory") || searchParams.get("subcategory_id");
+
+    if (sub) setFilterSubCat(sub);
+
     if (!cat || tree.length === 0) {
       if (cat) setFilterCat(cat);
       return;
@@ -147,7 +157,7 @@ const Annonces = () => {
     );
     if (asParent) {
       setFilterCat(String(asParent.id));
-      setFilterSubCat("all");
+      if (!sub) setFilterSubCat("all");
       return;
     }
     for (const parent of tree) {
@@ -163,7 +173,7 @@ const Annonces = () => {
       }
     }
     setFilterCat(cat);
-  }, [searchParams, tree]);
+  }, [searchParams, tree, runBrainSearch]);
 
   // BM25 search — déclenche après 400ms d'inactivité
   const runBrainSearch = useCallback((q: string) => {

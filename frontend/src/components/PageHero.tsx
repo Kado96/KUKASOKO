@@ -112,8 +112,8 @@ export default function PageHero({
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
-    const catId = subCategory !== "all" ? subCategory : category !== "all" ? category : "";
-    if (catId) params.set("category", catId);
+    if (category !== "all") params.set("category", category);
+    if (subCategory !== "all") params.set("subcategory", subCategory);
     navigate(`/annonces${params.toString() ? `?${params}` : ""}`);
   };
 

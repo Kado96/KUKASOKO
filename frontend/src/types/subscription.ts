@@ -53,6 +53,8 @@ export interface Payment {
   payment_method: string | null;
   created_at: string;
   confirmed_at: string | null;
+  checkout_url?: string;
+  checkout_data?: Record<string, string>;
 }
 
 export interface Notification {

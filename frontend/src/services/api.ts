@@ -194,9 +194,16 @@ export const mediaAPI = {
     });
   },
 
-  /** Supprime un fichier par son id */
-  delete: (id: number) => api.delete(`/api/media/${id}`),
+
+// ─── Paiements ───────────────────────────────────────────────────────────────
+
+export const paymentsAPI = {
+  createPayment: (data: { plan_code: string; payment_method: string; return_url?: string; cancel_url?: string }) =>
+    api.post("/api/payments", data),
+  getPaymentStatus: (paymentId: number) =>
+    api.get(`/api/payments/${paymentId}`),
 };
 
 export default api;
+
 

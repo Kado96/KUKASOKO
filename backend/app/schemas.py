@@ -342,6 +342,8 @@ class SubscriptionOut(BaseModel):
 class PaymentCreate(BaseModel):
     plan_code: str
     payment_method: str  # afri_pay, paypal, manual
+    return_url: Optional[str] = None
+    cancel_url: Optional[str] = None
 
 
 class PaymentOut(BaseModel):
@@ -356,9 +358,21 @@ class PaymentOut(BaseModel):
     payment_method: Optional[str]
     created_at: datetime
     confirmed_at: Optional[datetime]
+    checkout_url: Optional[str] = None
+    checkout_data: Optional[dict] = None
 
     class Config:
         from_attributes = True
+
+
+class AfriPayWebhookPayload(BaseModel):
+    client_token: Optional[str] = None
+    status: Optional[str] = None
+    response_code: Optional[str] = None
+    transaction_id: Optional[str] = None
+    phone: Optional[str] = None
+    amount: Optional[str] = None
+
 
 
 class NotificationOut(BaseModel):

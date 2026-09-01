@@ -67,10 +67,33 @@ export default function Pricing() {
         await subscriptionService.createSubscription('FREE');
         showToast('Plan GRATUIT activé avec succès ! 🎉');
       } else {
-        // Crée une demande de paiement, redirige vers la page paiement
-        const payment = await paymentService.createPayment(planCode, 'afripay');
         if (whatsapp) await subscriptionService.updateWhatsApp(whatsapp);
-        showToast(`Demande de paiement créée (#${payment.id}). Contactez l'admin pour confirmer.`, 'success');
+        
+        // 1. Initialiser le paiement avec le provider afri_pay
+        const payment = await paymentService.createPayment(planCode, 'afri_pay');
+
+        // 2. Si le checkout AfriPay est renvoyé avec les données de formulaire, soumettre automatiquement
+        if (payment.checkout_url && payment.checkout_data) {
+          showToast('Redirection vers la passerelle de paiement AfriPay...', 'success');
+          
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = payment.checkout_url;
+
+          Object.entries(payment.checkout_data).forEach(([key, val]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = val;
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+          return;
+        } else {
+          showToast(`Paiement #${payment.id} créé.`, 'success');
+        }
       }
       // Recharge l'abonnement
       const sub = await subscriptionService.getMySubscription();

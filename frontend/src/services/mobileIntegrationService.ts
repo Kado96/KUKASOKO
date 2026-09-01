@@ -1,7 +1,5 @@
 // Service d'intégration mobile pour les Badges d'icône d'application et Sonneries de notification
 
-import { Badge } from '@capawesome/capacitor-badge';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { subscriptionService } from './subscriptionService';
 
@@ -22,12 +20,16 @@ export const mobileIntegrationService = {
       const sub = await subscriptionService.getMySubscription();
       if (!sub || !sub.plan || (!sub.plan.whatsapp_notifications && sub.plan.code !== 'BUSINESS')) {
         // Option non incluse dans le plan actuel : on nettoie le badge
-        await Badge.clear();
+        try {
+          const { Badge } = await import('@capawesome/capacitor-badge');
+          await Badge.clear();
+        } catch {}
         return;
       }
 
       // 2. Additionner les notifications et les messages non lus
       const totalBadge = unreadCount + chatUnreadCount;
+      const { Badge } = await import('@capawesome/capacitor-badge');
       if (totalBadge > 0) {
         await Badge.set({ count: totalBadge });
       } else {
@@ -51,6 +53,7 @@ export const mobileIntegrationService = {
       }
 
       if (Capacitor.isNativePlatform()) {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
         // Demande d'autorisation pour les notifications locales
         const status = await LocalNotifications.requestPermissions();
         if (status.display === 'granted') {
@@ -76,3 +79,4 @@ export const mobileIntegrationService = {
     }
   }
 };
+

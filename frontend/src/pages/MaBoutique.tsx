@@ -645,20 +645,6 @@ const MaBoutique = () => {
         }
       })
       .catch(() => {});
-
-    // Charger les conseils du Coach IA
-    setCoachLoading(true);
-    import("@/services/api").then(({ api }) => {
-      api.get("/api/analytics/coach/tips")
-        .then((res) => {
-          setCoachAdvice(res.data.coach_advice);
-          setCoachStats(res.data.stats);
-        })
-        .catch(() => {
-          setCoachAdvice("Bienvenue dans votre boutique ! Boostez vos annonces pour obtenir des ventes rapidement.");
-        })
-        .finally(() => setCoachLoading(false));
-    });
   }, [isAuthenticated, user, fetchMyListings]);
 
   const uploadShopImage = async (file: File, field: "logo" | "cover") => {

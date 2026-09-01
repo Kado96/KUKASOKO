@@ -1,13 +1,4 @@
-/**
- * SellerCoachService.ts
- * ─────────────────────────────────────────────────────────────────────────────
- * Algorithme intelligent de coaching des vendeurs.
- * Il analyse les statistiques d'un vendeur et génère des recommandations
- * personnalisées pour l'encourager à passer à un plan payant,
- * améliorer sa boutique et augmenter ses ventes.
- */
-
-import { API_BASE } from "./api";
+import { api } from "./api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,8 +113,6 @@ class SellerCoachServiceClass {
    * Récupère les statistiques réelles du vendeur depuis l'API
    */
   async fetchStats(token: string): Promise<SellerStats> {
-    const headers = { Authorization: `Bearer ${token}` };
-
     let totalListings = 0;
     let activeListings = 0;
     let totalViews = 0;
@@ -136,14 +125,14 @@ class SellerCoachServiceClass {
 
     try {
       // Annonces du vendeur
-      const listRes = await fetch(`${API_BASE}/api/listings/?limit=100`, { headers });
-      if (listRes.ok) {
-        const data = await listRes.json();
+      const listRes = await api.get("/api/listings/?limit=100");
+      if (listRes.status === 200) {
+        const data = listRes.data;
         const listings = Array.isArray(data) ? data : data.items ?? [];
         totalListings = listings.length;
         activeListings = listings.filter((l: any) => l.is_active !== false).length;
         featuredCount = listings.filter((l: any) => l.is_featured).length;
-        // Estimation vues (si disponible via le champ views ou reviews)
+        // Estimation vues
         totalViews = listings.reduce((acc: number, l: any) => acc + (l.views ?? l.review_count ?? 0), 0);
         // Jours actif depuis la 1ère annonce
         if (listings.length > 0) {
@@ -159,18 +148,18 @@ class SellerCoachServiceClass {
 
     try {
       // Abonnement actuel
-      const subRes = await fetch(`${API_BASE}/api/subscriptions/my`, { headers });
-      if (subRes.ok) {
-        const sub = await subRes.json();
+      const subRes = await api.get("/api/subscriptions/me");
+      if (subRes.status === 200) {
+        const sub = subRes.data;
         if (sub?.plan?.code) plan = sub.plan.code;
       }
     } catch { /**/ }
 
     try {
       // Boutique du vendeur
-      const shopRes = await fetch(`${API_BASE}/api/merchants/me`, { headers });
-      if (shopRes.ok) {
-        const shop = await shopRes.json();
+      const shopRes = await api.get("/api/merchants/me");
+      if (shopRes.status === 200) {
+        const shop = shopRes.data;
         hasShop = !!shop?.shop_name;
         shopName = shop?.shop_name;
       }
@@ -178,9 +167,9 @@ class SellerCoachServiceClass {
 
     try {
       // Messages reçus
-      const msgRes = await fetch(`${API_BASE}/api/messages/conversations`, { headers });
-      if (msgRes.ok) {
-        const convs = await msgRes.json();
+      const msgRes = await api.get("/api/messages/conversations");
+      if (msgRes.status === 200) {
+        const convs = msgRes.data;
         totalMessages = Array.isArray(convs)
           ? convs.reduce((acc: number, c: any) => acc + (c.unread_count ?? 1), 0)
           : 0;

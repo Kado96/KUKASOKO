@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Send, MessageSquare, Bot, Star, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { KukasokoBrain } from "@/services/KukasokoBrainService";
+import { useSite } from "@/contexts/SiteContext";
 import PageHero from "@/components/PageHero";
 
 interface Review {
@@ -19,6 +19,7 @@ interface Review {
 }
 
 export default function About() {
+  const { settings } = useSite();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState({ name: "", rating: 5, text: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -115,9 +116,11 @@ export default function About() {
         <section className="py-16 container mx-auto px-4 max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
             <div className="space-y-6">
-              <h2 className="text-3xl font-display font-bold text-foreground">Notre Mission</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Kukasoko a été créé pour dynamiser l'économie locale en proposant un outil simple, performant et accessible. Que vous soyez un professionnel cherchant à booster sa boutique ou un particulier vendant ses objets, notre plateforme s'adapte à tous vos besoins.
+              <h2 className="text-3xl font-display font-bold text-foreground">
+                {settings.missionTitle || "Notre Mission & Vision"}
+              </h2>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {settings.missionText || "Kukasoko a été créé pour dynamiser l'économie locale..."}
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">

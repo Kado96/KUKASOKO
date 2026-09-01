@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 export interface SiteSettings {
   siteName: string;
@@ -7,6 +7,8 @@ export interface SiteSettings {
   footerPhone: string;
   heroTitle: string;
   heroSubtitle: string;
+  missionTitle: string;
+  missionText: string;
   /** @deprecated Prefer heroImages — kept for migration from older saved settings */
   heroImage: string;
   /** Images mises en avant dans le carrousel de la bannière d'accueil */
@@ -37,6 +39,8 @@ const defaultSettings: SiteSettings = {
   footerPhone: "+257 00 00 00 00",
   heroTitle: "Trouvez tout ce dont vous avez besoin au Burundi.",
   heroSubtitle: "Recherchez des propriétés, des services et des articles à vendre en un clic",
+  missionTitle: "Notre Mission & Vision",
+  missionText: "Kukasoko a été créé pour dynamiser l'économie locale en proposant un outil simple, performant et accessible. Que vous soyez un professionnel cherchant à booster sa boutique ou un particulier vendant ses objets, notre plateforme s'adapte à tous vos besoins.",
   heroImage: "",
   heroImages: [],
   // Default values matching index.css :root

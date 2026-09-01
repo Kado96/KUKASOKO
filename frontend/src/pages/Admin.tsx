@@ -2040,6 +2040,34 @@ const Admin = () => {
                     </div>
                   </div>
 
+                  {/* Mission & Vision customization */}
+                  <div className="bg-card rounded-xl border border-border p-6 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-foreground">Section Mission &amp; Vision (Page À propos)</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Modifiez le titre et le contenu de la section Mission &amp; Vision affichée sur la page À propos (<code className="text-accent">/a-propos</code>).
+                      </p>
+                    </div>
+
+                    <InlineField
+                      label="Titre de la section Mission"
+                      value={siteSettings.missionTitle || "Notre Mission & Vision"}
+                      onChange={(v) => updateSiteSettings({ missionTitle: v })}
+                    />
+
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Texte / Présentation de la Mission</label>
+                      <textarea
+                        id="mission-text"
+                        name="mission-text"
+                        value={siteSettings.missionText || ""}
+                        onChange={(e) => updateSiteSettings({ missionText: e.target.value })}
+                        placeholder="Expliquez la mission et la vision de Kukasoko..."
+                        className="w-full mt-1.5 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent min-h-[100px] resize-none"
+                      />
+                    </div>
+                  </div>
+
                   {/* Footer & Contacts customization */}
                   <div className="bg-card rounded-xl border border-border p-6 space-y-6">
                     <div>

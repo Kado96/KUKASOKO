@@ -209,6 +209,25 @@ export const paymentsAPI = {
     api.get(`/api/payments/${paymentId}`),
 };
 
+// ─── Abonnements & Tarifs ───────────────────────────────────────────────────
+
+export const subscriptionsAPI = {
+  getPlans: () => api.get("/api/subscriptions/plans"),
+  getAllPlansAdmin: () => api.get("/api/subscriptions/plans/all"),
+  updatePlan: (planCode: string, data: Partial<{
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    duration_days: number;
+    max_listings: number;
+    featured_listings: boolean;
+    advanced_analytics: boolean;
+    marketing_tools: boolean;
+    is_active: boolean;
+  }>) => api.patch(`/api/subscriptions/plans/${planCode}`, data),
+};
+
 export default api;
 
 

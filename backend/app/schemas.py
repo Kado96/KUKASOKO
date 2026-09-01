@@ -314,6 +314,28 @@ class SubscriptionPlanUpdateRules(BaseModel):
     whatsapp_notifications: bool
 
 
+class SubscriptionPlanUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[Decimal] = None
+    currency: Optional[str] = None
+    duration_days: Optional[int] = None
+    max_listings: Optional[int] = None
+    featured_listings: Optional[bool] = None
+    advanced_analytics: Optional[bool] = None
+    marketing_tools: Optional[bool] = None
+    is_active: Optional[bool] = None
+    notif_message_contact: Optional[bool] = None
+    notif_weekly_report: Optional[bool] = None
+    notif_listing_views: Optional[bool] = None
+    notif_new_review: Optional[bool] = None
+    notif_daily_ai_report: Optional[bool] = None
+    notif_anomaly_alert: Optional[bool] = None
+    notif_ai_recommendations: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+    whatsapp_notifications: Optional[bool] = None
+
+
 class SubscriptionCreate(BaseModel):
     plan_code: str
     whatsapp_number: Optional[str] = None

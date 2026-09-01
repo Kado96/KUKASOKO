@@ -16,10 +16,10 @@ import { toast } from "@/hooks/use-toast";
 import { useSite, THEMES } from "@/contexts/SiteContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { usersAPI, mediaAPI, listingsAPI, API_BASE } from "@/services/api";
+import { usersAPI, mediaAPI, listingsAPI, subscriptionsAPI, API_BASE } from "@/services/api";
 import { Copy, FolderOpen, HardDrive, Database } from "lucide-react";
 
-type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau" | "categories" | "blog";
+type Tab = "dashboard" | "annonces" | "boutiques" | "utilisateurs" | "signalements" | "chatbot" | "medias" | "personnalisation" | "bandeau" | "categories" | "blog" | "tarifs";
 
 type CategoryItem = {
   id: number;
@@ -274,6 +274,49 @@ const Admin = () => {
       loadMediaFiles();
     }
   }, [activeTab]);
+
+  /* tarifs & abonnements */
+  const [plansList, setPlansList] = useState<any[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [editingPlanCode, setEditingPlanCode] = useState<string | null>(null);
+  const [editPlanData, setEditPlanData] = useState<Partial<any>>({});
+  const [planSaving, setPlanSaving] = useState(false);
+
+  const loadPlans = async () => {
+    setPlansLoading(true);
+    try {
+      const res = await subscriptionsAPI.getAllPlansAdmin();
+      setPlansList(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      toast({ title: "Erreur", description: "Impossible de charger les plans d'abonnement.", variant: "destructive" });
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "tarifs" && isAuthenticated && user?.role === "admin") {
+      loadPlans();
+    }
+  }, [activeTab]);
+
+  const handleSavePlan = async (code: string) => {
+    setPlanSaving(true);
+    try {
+      await subscriptionsAPI.updatePlan(code, editPlanData);
+      toast({ title: `Plan ${code} mis à jour avec succès ✅` });
+      setEditingPlanCode(null);
+      loadPlans();
+    } catch (err: any) {
+      toast({
+        title: "Erreur de sauvegarde",
+        description: err?.response?.data?.detail || "Impossible de sauvegarder le plan.",
+        variant: "destructive",
+      });
+    } finally {
+      setPlanSaving(false);
+    }
+  };
 
   /* catégories */
   const [categoryTree, setCategoryTree] = useState<CategoryItem[]>([]);
@@ -733,6 +776,7 @@ const Admin = () => {
     { id: "chatbot", label: "Chatbot IA", icon: <MessageSquare className="w-4 h-4" /> },
     { id: "bandeau", label: "Bandeau Info", icon: <Radio className="w-4 h-4" /> },
     { id: "blog", label: "Articles Blog", icon: <Pencil className="w-4 h-4" /> },
+    { id: "tarifs", label: "Tarifs & Packs", icon: <DollarSign className="w-4 h-4" /> },
     { id: "medias", label: "Médiathèque", icon: <ImageIcon className="w-4 h-4" /> },
     { id: "personnalisation", label: "Personnalisation", icon: <Palette className="w-4 h-4" /> },
   ];
@@ -2499,6 +2543,257 @@ const Admin = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab Tarifs */}
+              {activeTab === "tarifs" && (
+                <div className="space-y-6">
+                  <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                          <DollarSign className="w-5 h-5 text-accent" /> Gestion des Tarifs & Packs d'Abonnement
+                        </h2>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Modifiez les prix en BIF/mois, le nombre maximum d'annonces autorisées et les options de mise en avant (carrousel HD).
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadPlans}
+                        disabled={plansLoading}
+                        className="text-xs gap-1.5"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${plansLoading ? "animate-spin" : ""}`} /> Actualiser
+                      </Button>
+                    </div>
+
+                    {plansLoading ? (
+                      <div className="flex justify-center items-center h-32">
+                        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                        {plansList.map((plan) => {
+                          const isEditing = editingPlanCode === plan.code;
+
+                          return (
+                            <div
+                              key={plan.id}
+                              className={`bg-secondary/20 rounded-xl border p-5 flex flex-col justify-between transition-all ${
+                                plan.code === "PRO"
+                                  ? "border-accent shadow-md relative"
+                                  : "border-border"
+                              }`}
+                            >
+                              {plan.code === "PRO" && (
+                                <span className="absolute -top-3 right-4 bg-accent text-accent-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  Populaire
+                                </span>
+                              )}
+
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h3 className="font-bold text-base text-foreground">{plan.name}</h3>
+                                  <Badge variant={plan.is_active ? "default" : "secondary"}>
+                                    {plan.is_active ? "Actif" : "Inactif"}
+                                  </Badge>
+                                </div>
+
+                                <p className="text-xs text-muted-foreground mb-4 min-h-[32px]">
+                                  {plan.description}
+                                </p>
+
+                                {isEditing ? (
+                                  <div className="space-y-3 bg-card p-3 rounded-lg border border-border">
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                        Nom du forfait
+                                      </label>
+                                      <input
+                                        id={`edit-plan-name-${plan.code}`}
+                                        name={`edit-plan-name-${plan.code}`}
+                                        type="text"
+                                        value={editPlanData.name ?? plan.name}
+                                        onChange={(e) =>
+                                          setEditPlanData({ ...editPlanData, name: e.target.value })
+                                        }
+                                        className="w-full text-xs p-1.5 rounded border border-border bg-background"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                        Prix ({plan.currency || "BIF"})
+                                      </label>
+                                      <input
+                                        id={`edit-plan-price-${plan.code}`}
+                                        name={`edit-plan-price-${plan.code}`}
+                                        type="number"
+                                        value={editPlanData.price ?? plan.price}
+                                        onChange={(e) =>
+                                          setEditPlanData({
+                                            ...editPlanData,
+                                            price: Number(e.target.value),
+                                          })
+                                        }
+                                        className="w-full text-xs p-1.5 rounded border border-border bg-background font-bold text-accent"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                        Limite d'annonces
+                                      </label>
+                                      <input
+                                        id={`edit-plan-max-${plan.code}`}
+                                        name={`edit-plan-max-${plan.code}`}
+                                        type="number"
+                                        value={editPlanData.max_listings ?? plan.max_listings}
+                                        onChange={(e) =>
+                                          setEditPlanData({
+                                            ...editPlanData,
+                                            max_listings: Number(e.target.value),
+                                          })
+                                        }
+                                        className="w-full text-xs p-1.5 rounded border border-border bg-background"
+                                      />
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-1">
+                                      <span className="text-[11px] font-medium text-foreground">
+                                        Mise en avant (Carrousel HD)
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditPlanData({
+                                            ...editPlanData,
+                                            featured_listings: !(
+                                              editPlanData.featured_listings ?? plan.featured_listings
+                                            ),
+                                          })
+                                        }
+                                        className="text-accent"
+                                      >
+                                        {(editPlanData.featured_listings ?? plan.featured_listings) ? (
+                                          <ToggleRight className="w-6 h-6 text-green-500" />
+                                        ) : (
+                                          <ToggleLeft className="w-6 h-6 text-muted-foreground" />
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-1">
+                                      <span className="text-[11px] font-medium text-foreground">
+                                        Statut Actif
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditPlanData({
+                                            ...editPlanData,
+                                            is_active: !(
+                                              editPlanData.is_active ?? plan.is_active
+                                            ),
+                                          })
+                                        }
+                                      >
+                                        {(editPlanData.is_active ?? plan.is_active) ? (
+                                          <ToggleRight className="w-6 h-6 text-green-500" />
+                                        ) : (
+                                          <ToggleLeft className="w-6 h-6 text-muted-foreground" />
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleSavePlan(plan.code)}
+                                        disabled={planSaving}
+                                        className="flex-1 text-xs h-8 bg-accent text-accent-foreground font-bold"
+                                      >
+                                        {planSaving ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <>
+                                            <Save className="w-3.5 h-3.5 mr-1" /> Enregistrer
+                                          </>
+                                        )}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setEditingPlanCode(null)}
+                                        className="text-xs h-8 px-2"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="text-2xl font-extrabold text-foreground">
+                                      {Number(plan.price).toLocaleString("fr-BI")}{" "}
+                                      <span className="text-xs font-normal text-muted-foreground">
+                                        {plan.currency || "BIF"} / mois
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-1.5 text-xs text-muted-foreground border-t border-border/50 pt-3">
+                                      <div className="flex items-center gap-1.5">
+                                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                        <span>
+                                          <strong>{plan.max_listings}</strong> annonces actives
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        {plan.featured_listings ? (
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                        ) : (
+                                          <XCircle className="w-3.5 h-3.5 text-muted-foreground/40" />
+                                        )}
+                                        <span>Annonces & Boutiques mises en avant</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        {plan.marketing_tools ? (
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                        ) : (
+                                          <XCircle className="w-3.5 h-3.5 text-muted-foreground/40" />
+                                        )}
+                                        <span>Outils marketing & Statistiques</span>
+                                      </div>
+                                    </div>
+
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingPlanCode(plan.code);
+                                        setEditPlanData({
+                                          name: plan.name,
+                                          price: Number(plan.price),
+                                          max_listings: plan.max_listings,
+                                          featured_listings: plan.featured_listings,
+                                          is_active: plan.is_active,
+                                        });
+                                      }}
+                                      className="w-full mt-4 text-xs font-semibold gap-1.5 border-border"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" /> Modifier ce forfait
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

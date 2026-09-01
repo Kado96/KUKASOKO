@@ -7,7 +7,7 @@ from app.auth import get_current_user
 from app.models import User, SubscriptionPlan, Subscription
 from app.schemas import (
     SubscriptionPlanOut, SubscriptionOut, SubscriptionCreate,
-    SubscriptionUpdatePreferences, SubscriptionPlanUpdateRules
+    SubscriptionUpdatePreferences, SubscriptionPlanUpdateRules, SubscriptionPlanUpdate
 )
 from app.services import subscription_service
 
@@ -18,6 +18,40 @@ router = APIRouter()
 def list_plans(db: Session = Depends(get_db)):
     """Liste tous les plans d'abonnement actifs (endpoint public)."""
     return db.query(SubscriptionPlan).filter(SubscriptionPlan.is_active == True).all()
+
+
+@router.get("/plans/all", response_model=List[SubscriptionPlanOut])
+def list_all_plans(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """[Admin] Liste TOUS les plans d'abonnement y compris inactifs."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs.")
+    return db.query(SubscriptionPlan).all()
+
+
+@router.patch("/plans/{plan_code}", response_model=SubscriptionPlanOut)
+def update_plan_complete(
+    plan_code: str,
+    body: SubscriptionPlanUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """[Admin] Modifie tous les paramètres d'un plan tarifaire (nom, prix, limites, etc.)."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accès réservé aux administrateurs.")
+
+    plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.code == plan_code.upper()).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Plan '{plan_code}' introuvable.")
+
+    for key, value in body.dict(exclude_unset=True).items():
+        setattr(plan, key, value)
+
+    db.commit()
+    db.refresh(plan)
+    return plan
 
 
 @router.get("/me", response_model=SubscriptionOut)

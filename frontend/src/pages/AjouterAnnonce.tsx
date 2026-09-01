@@ -397,7 +397,7 @@ const AjouterAnnonce = () => {
                     Pour des annonces illimitées et permanentes,{" "}
                     <button
                       type="button"
-                      onClick={() => navigate("/register")}
+                      onClick={() => navigate("/login")}
                       className="text-[#c8911f] font-semibold underline underline-offset-2 hover:text-[#febb2d]"
                     >
                       créez votre boutique gratuitement

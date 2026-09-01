@@ -102,6 +102,7 @@ export default function About() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
+      <main className="flex-grow pt-16">
         {/* Hero Section avec Carrousel HD */}
         <PageHero
           title="À Propos de Kukasoko"

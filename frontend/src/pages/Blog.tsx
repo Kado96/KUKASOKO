@@ -1,5 +1,6 @@
-﻿import Navbar from "@/components/Navbar";
+import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { blogPosts } from "@/data/blogPosts";
@@ -20,15 +21,15 @@ const Blog = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-16">
-        <div className="bg-primary py-12">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-display font-bold text-primary-foreground mb-2">Blog</h1>
-            <p className="text-primary-foreground/70">Actualités, conseils et guides pour bien utiliser KUKASOKO</p>
-          </div>
-        </div>
+      <main className="flex-grow pt-16">
+        <PageHero
+          title="Blog & Actualités Kukasoko"
+          subtitle="Découvrez nos conseils, guides pratiques et actualités pour optimiser vos ventes et vos achats au Burundi."
+          showSearch={false}
+          compact={true}
+        />
 
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

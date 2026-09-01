@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Send, MessageSquare, Bot, Star, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { KukasokoBrain } from "@/services/KukasokoBrainService";
+import PageHero from "@/components/PageHero";
 
 interface Review {
   id: number;
@@ -101,16 +102,13 @@ export default function About() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-grow pt-16">
-        {/* Hero Section */}
-        <section className="bg-primary text-primary-foreground py-16 text-center">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <h1 className="text-4xl font-display font-bold mb-4">À Propos de Kukasoko</h1>
-            <p className="text-primary-foreground/80 text-lg leading-relaxed">
-              La plateforme d'annonces en ligne nouvelle génération, conçue pour connecter instantanément acheteurs et vendeurs grâce à la puissance de la géolocalisation et de l'intelligence artificielle.
-            </p>
-          </div>
-        </section>
+        {/* Hero Section avec Carrousel HD */}
+        <PageHero
+          title="À Propos de Kukasoko"
+          subtitle="La plateforme d'annonces en ligne nouvelle génération, conçue pour connecter instantanément acheteurs et vendeurs grâce à la géolocalisation et l'intelligence artificielle."
+          showSearch={false}
+          compact={true}
+        />
 
         {/* Qui sommes-nous & Contacts */}
         <section className="py-16 container mx-auto px-4 max-w-6xl">

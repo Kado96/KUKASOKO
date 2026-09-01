@@ -4,6 +4,7 @@ import { subscriptionService, paymentService } from '../services/subscriptionSer
 import type { SubscriptionPlan, Subscription } from '../types/subscription';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import PageHero from '../components/PageHero';
 import './Pricing.css';
 
 const PLAN_ICONS: Record<string, React.ReactNode> = {
@@ -122,20 +123,13 @@ export default function Pricing() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-grow pt-16">
+        <PageHero
+          title="Plans & Tarifs sur mesure"
+          subtitle="De l'annonce gratuite à la boutique professionnelle complète, choisissez la formule idéale pour booster vos ventes."
+          showSearch={false}
+          compact={true}
+        />
         <div className="pricing-page">
-          {/* ── Toast ── */}
-          {toast && (
-            <div className={`pricing-toast pricing-toast--${toast.type}`}>
-              {toast.msg}
-            </div>
-          )}
-
-          {/* ── Hero ── */}
-          <section className="pricing-hero">
-            <div className="pricing-hero-badge">Plans &amp; Tarifs</div>
-            <h1>Choisissez le plan qui <span className="pricing-gradient-text">vous convient</span></h1>
-            <p>De l'annonce gratuite à la boutique professionnelle complète, nous avons la solution pour chaque vendeur.</p>
-          </section>
 
           {/* ── Cards ── */}
           <section className="pricing-cards">

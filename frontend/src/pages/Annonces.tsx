@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { Star, Calendar, Search, SlidersHorizontal, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -274,17 +275,16 @@ const Annonces = () => {
   const isBrainMode = !!(brainResults && search.trim().length >= 2);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-16">
-        {/* Header */}
-        <div className="bg-primary py-12">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl font-display font-bold text-primary-foreground mb-2">Toutes les annonces</h1>
-            <p className="text-primary-foreground/70">Parcourez toutes les annonces disponibles</p>
-          </div>
-        </div>
-
+      <main className="flex-grow pt-16">
+        {/* Hero Banner avec Carrousel HD & Recherche */}
+        <PageHero
+          title="Toutes les Annonces au Burundi"
+          subtitle="Découvrez des milliers de biens, services et affaires vérifiés à Bujumbura et dans tout le pays."
+          showSearch={true}
+          compact={true}
+        />
         <div className="container mx-auto px-4 py-8">
           {/* Filters */}
           <div className="mb-8 space-y-3">

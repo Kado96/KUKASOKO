@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -158,25 +159,15 @@ const Boutique = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-16 flex-1">
-
-        {/* ── Hero ── */}
-        <div className="bg-primary py-14">
-          <div className="container mx-auto px-4 text-center">
-            <span className="inline-block bg-[#febb2d]/20 text-[#febb2d] text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
-              🎉 Phase de lancement — Totalement gratuit
-            </span>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground mb-3">
-              Choisissez votre pack de publication
-            </h1>
-            <p className="text-primary-foreground/70 max-w-xl mx-auto text-sm">
-              Publiez vos annonces, atteignez des milliers d'acheteurs à Bujumbura et partout au Burundi.
-              Tous les packs sont <strong className="text-[#febb2d]">gratuits</strong> pendant notre phase de lancement.
-            </p>
-          </div>
-        </div>
+      <main className="flex-grow pt-16">
+        <PageHero
+          title="Boutique & Packs Vendeurs"
+          subtitle="Choisissez le pack adapté pour vendre plus vite, augmenter votre visibilité et gérer vos annonces au Burundi."
+          showSearch={false}
+          compact={true}
+        />
 
         {/* ── Grille des packs ── */}
         <div className="container mx-auto px-4 py-14">

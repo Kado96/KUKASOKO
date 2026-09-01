@@ -194,6 +194,9 @@ export const mediaAPI = {
     });
   },
 
+  /** Supprime un fichier par son id */
+  delete: (id: number) => api.delete(`/api/media/${id}`),
+};
 
 // ─── Paiements ───────────────────────────────────────────────────────────────
 

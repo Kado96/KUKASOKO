@@ -9,17 +9,12 @@ const Footer = () => {
       <div className="container mx-auto px-4 pt-8 pb-16"> {/* pb-16 gives space for the 44px ticker */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              {settings.siteLogo ? (
-                <img src={settings.siteLogo} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-                  <span className="font-display font-bold text-accent-foreground text-sm">
-                    {(settings.siteName || "K").charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <span className="font-display font-bold text-lg uppercase">{settings.siteName}</span>
+            <div className="flex items-center gap-3 mb-4">
+              <img src={settings.siteLogo || "/logo.jpg"} alt="Kukasoko Online" className="w-9 h-9 rounded-xl object-cover ring-2 ring-yellow-400/40" />
+              <div className="flex flex-col leading-none">
+                <span className="font-display font-bold text-lg uppercase tracking-wider text-primary-foreground">KUKASOKO</span>
+                <span className="text-[10px] text-accent tracking-[0.2em] font-bold uppercase mt-0.5">ONLINE</span>
+              </div>
             </div>
             <p className="text-primary-foreground/60 text-sm leading-relaxed">
               La plateforme d'annonces en ligne pour trouver tout ce dont vous avez besoin.

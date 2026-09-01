@@ -53,21 +53,13 @@ const Navbar = () => {
 
         {/* ── Logo ── */}
         <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          {settings.siteLogo ? (
-            <img src={settings.siteLogo} alt="Logo" className="w-9 h-9 rounded-lg object-cover ring-2 ring-white/20" />
-          ) : (
-            <div className="w-9 h-9 rounded-lg bg-yellow-400 flex items-center justify-center shadow-sm">
-              <span className="font-bold text-gray-900 text-lg leading-none">
-                K
-              </span>
-            </div>
-          )}
+          <img src={settings.siteLogo || "/logo.jpg"} alt="Kukasoko Online" className="w-10 h-10 rounded-xl object-cover ring-2 ring-yellow-400/40 shadow-sm" />
           <div className="flex flex-col leading-none">
-            <span className="font-bold text-white text-sm tracking-widest uppercase">
-              {settings.siteName || "KUKASOKO ONLINE"}
+            <span className="font-bold text-white text-base tracking-wider uppercase font-display">
+              {settings.siteName || "KUKASOKO"}
             </span>
-            <span className="text-[9px] text-white/40 tracking-[0.2em] uppercase mt-0.5">
-              Marketplace
+            <span className="text-[10px] text-white/50 tracking-[0.25em] uppercase font-semibold mt-0.5">
+              ONLINE
             </span>
           </div>
         </Link>

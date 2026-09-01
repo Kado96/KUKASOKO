@@ -15,7 +15,7 @@ const Footer = () => {
               ) : (
                 <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
                   <span className="font-display font-bold text-accent-foreground text-sm">
-                    {(settings.siteName || "I").charAt(0).toUpperCase()}
+                    {(settings.siteName || "K").charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}

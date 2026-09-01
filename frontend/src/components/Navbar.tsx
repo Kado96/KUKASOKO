@@ -58,13 +58,13 @@ const Navbar = () => {
           ) : (
             <div className="w-9 h-9 rounded-lg bg-yellow-400 flex items-center justify-center shadow-sm">
               <span className="font-bold text-gray-900 text-lg leading-none">
-                {(settings.siteName || "K").charAt(0).toUpperCase()}
+                K
               </span>
             </div>
           )}
           <div className="flex flex-col leading-none">
             <span className="font-bold text-white text-sm tracking-widest uppercase">
-              {settings.siteName || "KUKASOKO"}
+              {settings.siteName || "KUKASOKO ONLINE"}
             </span>
             <span className="text-[9px] text-white/40 tracking-[0.2em] uppercase mt-0.5">
               Marketplace

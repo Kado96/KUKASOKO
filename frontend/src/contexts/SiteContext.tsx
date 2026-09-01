@@ -33,9 +33,9 @@ interface SiteContextType {
 }
 
 const defaultSettings: SiteSettings = {
-  siteName: "KUKASOKO",
+  siteName: "KUKASOKO ONLINE",
   siteLogo: "/logo.jpg",
-  footerEmail: "info@kukasoko.com",
+  footerEmail: "info@kukasoko-online.com",
   footerPhone: "+257 00 00 00 00",
   heroTitle: "Trouvez tout ce dont vous avez besoin au Burundi.",
   heroSubtitle: "Recherchez des propriétés, des services et des articles à vendre en un clic",

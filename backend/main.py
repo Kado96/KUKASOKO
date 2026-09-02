@@ -74,6 +74,7 @@ _extra_origins = [
 ]
 
 ALLOWED_ORIGINS = [
+    "*",
     # Développement local
     "http://localhost:5173",
     "http://localhost:3000",
@@ -83,7 +84,8 @@ ALLOWED_ORIGINS = [
     "capacitor://localhost",
     "http://10.0.2.2:8000",
     "http://172.22.0.1:8080",
-    # Production (http + https)
+    # Production Vercel & Wuaze & Render
+    "https://frontend-chi-henna-90.vercel.app",
     "https://kukasoko.wuaze.com",
     "http://kukasoko.wuaze.com",
     "https://www.kukasoko.wuaze.com",
@@ -95,7 +97,8 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,14 +110,13 @@ app.add_middleware(
 # toujours injecter les headers. Ce handler les force manuellement.
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    origin = request.headers.get("origin", "")
-    cors_origin = origin if origin in ALLOWED_ORIGINS else ""
-    headers = {}
-    if cors_origin:
-        headers["Access-Control-Allow-Origin"] = cors_origin
-        headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Access-Control-Allow-Methods"] = "*"
-        headers["Access-Control-Allow-Headers"] = "*"
+    origin = request.headers.get("origin", "*")
+    headers = {
+        "Access-Control-Allow-Origin": origin if origin else "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
     logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,

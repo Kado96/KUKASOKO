@@ -30,18 +30,51 @@ export default function Pricing() {
 
   const isLoggedIn = !!localStorage.getItem('kukasoko_token');
 
+  const DEFAULT_PLANS: SubscriptionPlan[] = [
+    {
+      id: 1,
+      name: 'Plan Gratuit',
+      code: 'FREE',
+      price: 0,
+      period: 'mois',
+      description: 'Pour démarrer et publier vos premières annonces',
+      features: ['Jusqu\'à 5 annonces actives', 'Visibilité standard', 'Support communautaire']
+    },
+    {
+      id: 2,
+      name: 'Plan PRO',
+      code: 'PRO',
+      price: 25000,
+      period: 'mois',
+      description: 'Pour les vendeurs réguliers et petites boutiques',
+      features: ['Annonces illimitées', 'Badges Vendeur Pro', 'Statistiques de vue', 'Support prioritaire WhatsApp']
+    },
+    {
+      id: 3,
+      name: 'Plan BUSINESS',
+      code: 'BUSINESS',
+      price: 75000,
+      period: 'mois',
+      description: 'Pour les entreprises et grandes enseignes',
+      features: ['Boutique dédiée sur la carte', 'Mise en avant carrousel HD', 'Gestionnaire de compte dédié', 'Export de rapports']
+    }
+  ];
+
   useEffect(() => {
     (async () => {
       try {
         const [p, s] = await Promise.all([
           subscriptionService.getPlans(),
-          isLoggedIn ? subscriptionService.getMySubscription() : null,
+          isLoggedIn ? subscriptionService.getMySubscription().catch(() => null) : null,
         ]);
-        setPlans(p);
+        if (p && p.length > 0) {
+          setPlans(p);
+        } else {
+          setPlans(DEFAULT_PLANS);
+        }
         setCurrentSub(s);
       } catch {
-        // plans toujours visibles même sans auth
-        try { setPlans(await subscriptionService.getPlans()); } catch {}
+        setPlans(DEFAULT_PLANS);
       } finally {
         setLoading(false);
       }
